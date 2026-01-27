@@ -1,15 +1,33 @@
 <!doctype html>
 <html lang="en">
-<head>
+<head> 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>D-E Web Monitoring Portal</title>
-</head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"></link>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet"></link>
+
 <body>
-  <h1>Welcome to the Directed Evolution Web Monitoring Portal</h1>
-  <h3>This portal provides monitoring and analytics for researchers participating in directed evolution experiments.</h3>
-  <p> Upload your experimental data in JSON or TSV format here and use the following features to analyse your results:
-    <ul>
+ <div class="row mb-4">
+  <div class="col">
+    <div class="p-4 bg-white rounded shadow-sm">
+    <div class="text-center">
+      <h1 class="h3 fw-bold mb-2">
+        Directed Evolution Monitoring & Analysis
+      </h1>
+      <p class="text-muted mb-0">
+        <h4> Provides monitoring and analytics for researchers participating in directed evolution experiments. Track experimental rounds, variant libraries, and evolutionary trajectories across iterative selection cycles.</h4>
+      </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col">
+    <div class="text-center">
+    <h4> Upload your experimental data in JSON or TSV format here and use the following features to analyse your results: </h4>
+    <ul style="display: inline-block; text-align: left;">
       <li>Validate that the desired wild-type protein is encoded in the plasmid FASTA data</li>
       <li>Calculates and records the activity score of each variant</li>
       <li>Compare performance across different generations</li>
@@ -17,8 +35,16 @@
       <li>Track mutations over generations</li>
       <li>Generate comprehensive reports on your study</li>
     </ul>
-  </p>
-  <h3>To get started and upload your experimental data, please register for an account or log in if you already have an account.</h3>
-  <a href="/register">Register</a> | <a href="/login">Login</a>
+    </div>
+  </div>
+</div>
+
+<div class="text-center">
+  <h4>To get started and upload your experimental data, please register for an account or log in if you already have an account.</h4>
+    <a href="/register" class="btn btn-primary btn-lg m-3" role="button" aria-pressed="true">Register</a>
+    <a href="/login" class="btn btn-secondary btn-lg m-3" role ="button" aria-pressed="true">Login   </a>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</div>
 </body>
 </html>
+
