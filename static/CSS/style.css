@@ -1,20 +1,25 @@
 /* Root Colors */
-:root {
+:root{
   --color-primary: #1a6b7f;
   --color-primary-dark: #135166;
-  --color-primary-foreground: #c5f5fd;
+  --color-primary-foreground: #e4f9fd;
   
-  --color-accent: #3ebac4;
+  --color-accent: #046f77;
   --color-accent-dark: #2d99a8;
   --color-accent-foreground: #ffffff;
   
-  --color-background: #e1fdfc;
+  --color-background: #ffffff;
   --color-foreground: #001b24;
   --color-muted: #f0f4fa;
   --color-muted-foreground: #5a7588;
   --color-border: #e0e5eb;
 }
 
+body {
+  background-color: var(--color-background);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 /* Animations */
 @keyframes slideUp {
   from {
