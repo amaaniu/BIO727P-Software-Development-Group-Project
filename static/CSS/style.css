@@ -4,8 +4,8 @@
   --color-primary-dark: #135166;
   --color-primary-foreground: #e4f9fd;
   
-  --color-accent: #046f77;
-  --color-accent-dark: #2d99a8;
+  --color-accent: #008791;
+  --color-accent-dark: #2abccf;
   --color-accent-foreground: #ffffff;
   
   --color-background: #ffffff;
@@ -150,7 +150,7 @@ body {
 }
 
 .navbar-brand {
-  color: var(--color-primary-foreground) !important;
+  color: var(--color-primary-foreground);
   font-weight: 600;
   font-size: 1.25rem;
   transition: opacity 0.3s ease;
@@ -158,27 +158,27 @@ body {
 
 .navbar-brand:hover {
   opacity: 0.8;
-  color: var(--color-primary-foreground) !important;
+  color: var(--color-primary-foreground);
 }
 
 .navbar-nav .nav-link {
-  color: var(--color-primary-foreground) !important;
+  color: var(--color-primary-foreground);
   transition: color 0.3s ease;
   margin: 0 0.5rem;
 }
 
 .navbar-nav .nav-link:hover {
-  color: var(--color-accent) !important;
+  color: var(--color-foreground);
 }
 
 .navbar-nav .nav-link.active {
-  color: var(--color-accent) !important;
+  color: var(--color-accent);
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: 0.25rem;
 }
 
 .navbar-toggler {
-  border-color: var(--color-primary-foreground) !important;
+  border-color: var(--color-primary-foreground);
 }
 
 .navbar-toggler-icon {
@@ -200,4 +200,15 @@ body {
 .section-badge-accent {
   background-color: #e7f1ff;
   color: var(--color-accent);
+}
+
+/* Custom styles for the buttons */
+.btn-primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-foreground);
+}
+
+.btn-secondary {
+  background-color: var(--color-accent-dark);
+  border-color: var(--color-foreground);
 }
