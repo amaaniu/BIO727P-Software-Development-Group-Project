@@ -11,45 +11,47 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
 
-<!-- Navigation Bar -->
-<header class="header-fixed"></header>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-semibold" href="{{ url_for('main.home') }}">
-      Directed Evolution Monitoring & Analytics
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-      <ul class="navbar-nav mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.features') }}">Features</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.documentation') }}">Documentation</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.casestudy-tutorial') }}">Case Study/Tutorial</a>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
-</header>
-
 <body>
 
-    <div class="p-4 ">
+<!-- Navigation Bar -->
+  <header class="header-fixed"></header>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-semibold" href="{{ url_for('main.home') }}">
+        Directed Evolution Monitoring & Analytics
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.features') }}">Features</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.documentation') }}">Documentation</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.casestudy-tutorial') }}">Case Study/Tutorial</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  </header>
+
+<!-- Main Body Content -->
+  <div class="p-4 ">
     <div class="text-center">
       <h1 class="h3 fw-bold mb-2">
         Directed Evolution Monitoring & Analytics
@@ -62,9 +64,9 @@
     </div>
   </div>
 
-<main class="container-fluid py-1"> 
+  <main class="container-fluid py-1"> 
 <!-- Features Grid Section -->
-<section class="container-fluid my-3">
+  <section class="container-fluid my-3">
     <div class="text-center">
       <span class="section-badge section-badge-accent">Platform Features</span>
     <h4> Upload your experimental data in JSON or TSV format and use the following features to analyse your results: </h4>
@@ -212,6 +214,7 @@
 
 </section> 
 
+<!--Register or Login Now-->
 <div class="container-fluid my-3 text-center">
   <h4>To get started, please register for an account or log in if you already have an account.</h4>
     <a href="/register" class="btn btn-primary btn-lg m-3" role="button" aria-pressed="true">Register</a>
