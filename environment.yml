@@ -2,7 +2,7 @@ name: myenv
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.14
   - numpy
   - pandas
   - scikit-learn
@@ -18,3 +18,4 @@ dependencies:
   - pip
   - pip:
       - flask-sqlalchemy
+
