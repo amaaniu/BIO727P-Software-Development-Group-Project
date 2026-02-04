@@ -18,7 +18,7 @@
 <header class="header-fixed"></header>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
   <div class="container-fluid">
-    <a class="navbar-brand fw-semibold" href="{{ url_for('home') }}">
+    <a class="navbar-brand fw-semibold" href="{{ url_for('main.home') }}">
       Directed Evolution Monitoring & Analytics
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -27,23 +27,24 @@
 
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <ul class="navbar-nav mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('features') }}">Features</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('documentation') }}">Documentation</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('casestudy_tutorial') }}">Case Study/Tutorial</a>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('register') }}">Register</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-        </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.features') }}">Features</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.documentation') }}">Documentation</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.casestudy_tutorial') }}">Case Study/Tutorial</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+      </li>
       </ul>
     </div>
   </div>
@@ -63,7 +64,7 @@
             <h2>Login to Your Account</h2>
           </div>
           <div class="card-body">
-            <form method="POST" action="{{ url_for('login') }}">
+            <form method="POST" action="{{ url_for('main.login') }}">
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" class="form-control" id="email" name="email" required>
@@ -74,7 +75,7 @@
               </div>
               <div class="d-grid gap-2">
                 <button type="submit" class="btn bg-primary text-white">Login</button>
-                <p class="text-center mt-3">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+                <p class="text-center mt-3">Don't have an account? <a href="{{ url_for('main.register') }}">Register here</a></p>
               </div>
             </form>
           </div>

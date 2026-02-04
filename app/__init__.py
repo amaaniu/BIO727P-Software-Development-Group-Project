@@ -4,7 +4,8 @@ from .main import main_bp
 
 def create_app():
     """Creates and configures the Flask application."""
-
     app = Flask(__name__)
+    
     app.register_blueprint(main_bp)
+    
     return app
