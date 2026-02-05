@@ -1,0 +1,6 @@
+# Generated visualisation outputs (keep local)
+
+outputs/
+*.html
+*.png
+*.csv
