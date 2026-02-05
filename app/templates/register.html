@@ -42,7 +42,7 @@
           <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
             </li>
             <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+          <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
             </li>
           </ul>
       </div>
@@ -78,7 +78,7 @@
               </div>
               <div class="d-grid gap-2">
                 <button type="submit" class="btn bg-primary text-white">Register</button>
-                <p class="text-center mt-3">Already have an account? <a href="{{ url_for('main.login') }}">Login here</a></p>
+                <p class="text-center mt-3">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
               </div>
             </form>
           </div>

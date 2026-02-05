@@ -8,7 +8,7 @@
   --color-accent-dark: #2abccf;
   --color-accent-foreground: #ffffff;
   
-  --color-background: #fdffff;
+  --color-background: #fcffff;
   --color-foreground: #001b24;
   --color-muted: #f0f4fa;
   --color-muted-foreground: #5a7588;
@@ -43,10 +43,10 @@ body {
 
 @keyframes glow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(30, 107, 127, 0.5);
+    box-shadow: 0 0 25px rgba(30, 107, 127, 0.5);
   }
   50% {
-    box-shadow: 0 0 30px rgba(62, 186, 196, 0.8);
+    box-shadow: 0 0 50px rgba(62, 186, 196, 0.8);
   }
 }
 
@@ -159,7 +159,7 @@ body {
 
 .navbar-brand:hover {
   opacity: 0.8;
-  color: var(--color-primary-foreground);
+  color: var(--color-foreground);
 }
 
 .navbar-nav .nav-link {

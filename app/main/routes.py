@@ -16,13 +16,6 @@ def register():
 
     return render_template('register.html')
 
-# Creates the route for the login page
-@main_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    """Renders the login page."""
-
-    return render_template('login.html')
-
 # Creates the route for the features page
 @main_bp.route('/features')
 def features():
@@ -43,3 +36,9 @@ def casestudy_tutorial():
     """Renders the case study tutorial page."""
 
     return 'soon rendering template casestudy tutorial'
+
+@main_bp.route('/dashboard')
+def dashboard():
+    """Renders the dashboard page, after user is authenticated."""
+
+    return render_template('dashboard.html')

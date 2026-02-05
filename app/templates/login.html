@@ -43,7 +43,7 @@
         <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
       </li>
       </ul>
     </div>
@@ -64,7 +64,7 @@
             <h2>Login to Your Account</h2>
           </div>
           <div class="card-body">
-            <form method="POST" action="{{ url_for('main.login') }}">
+            <form method="POST" action="{{ url_for('auth.login') }}">
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" class="form-control" id="email" name="email" required>
@@ -83,6 +83,21 @@
       </div>
     </div>
   </div>
+
+<!-- Flash messages for login success or failure -->  
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="container mt-3">
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
 </main>
 
 <footer class="fixed-bottom text-center bg-primary text-white py-3">
