@@ -6,7 +6,7 @@ body {
 }
 
 h2, h3 {
-    color: #d16c8a;
+    color: #318f9b;
 }
 
 label {
@@ -25,13 +25,17 @@ button {
 }
 
 pre {
-    background-color: #e7bad2;
+    background-color: #d3faf5;
     padding: 12px;
     border-radius: 4px;
-    overflow-x: auto;
     font-size: 0.9em;
+
+    white-space: pre-wrap;   /* allows wrapping */
+    word-break: break-all;   /* breaks long strings */
+    overflow-x: hidden;      /* removes horizontal scroll */
 }
 
+
 body {
-    background-color: #f1d7e0;
+    background-color: #d7eef1;
 }
