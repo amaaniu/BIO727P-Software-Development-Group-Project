@@ -1,0 +1,37 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    line-height: 1.6;
+}
+
+h2, h3 {
+    color: #d16c8a;
+}
+
+label {
+    font-weight: bold;
+}
+
+input {
+    width: 300px;
+    padding: 6px;
+}
+
+button {
+    padding: 6px 12px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+pre {
+    background-color: #e7bad2;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+
+body {
+    background-color: #f1d7e0;
+}
