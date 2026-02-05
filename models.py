@@ -1,71 +1,69 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, MetaData, table, create_engine
-from sqlalchemy.orm import declarative_base
+from flask_sqlalchemy import SQLAlchemy
 
-db_url = 'sqlite:///experiment.db'  # do we need to change this to the uploaded database file?
-engine = create_engine(db_url)
-base = declarative_base()
-class User(base):
+db = SQLAlchemy()
+
+class User(db.Model):
     __tablename__ = 'User'
-    user_id = Column(Integer, primary_key=True)
-    email = Column(String, nullable=False)
-    password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False)  
-    last_login = Column(DateTime)  
+    user_id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String, nullable=False)
+    password_hash = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+    last_login = db.Column(db.DateTime)
 
-class Experiment(base):
+class Experiment(db.Model):
     __tablename__ = 'Experiment'
-    experiment_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('User.user_id'), nullable=False)
-    experiment_name = Column(String, nullable=False)
-    uniprot_id = Column(String, nullable=False)
-    wt_protein_sequence = Column(String)
-    protein_features = Column(String)
-    plasmid_sequence = Column(String)
-    created_at = Column(DateTime, nullable=False)  
-    status = Column(String)
+    experiment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('User.user_id'), nullable=False)
+    experiment_name = db.Column(db.String, nullable=False)
+    uniprot_id = db.Column(db.String, nullable=False)
+    wt_protein_sequence = db.Column(db.String)
+    protein_features = db.Column(db.String)
+    plasmid_sequence = db.Column(db.String)
+    created_at = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String)
 
-class Variant(base):
+class Variant(db.Model):
     __tablename__ = 'Variant'
-    variant_id = Column(Integer, primary_key=True, autoincrement=True)
-    experiment_id = Column(Integer, ForeignKey('Experiment.experiment_id'), nullable=False)
-    generation = Column(Integer, nullable=False)
-    plasmid_variant_index = Column(String, nullable=False)
-    parent_variant_id = Column(Integer, ForeignKey('Variant.variant_id'))
-    dna_sequence = Column(String, nullable=False)
-    protein_sequence = Column(String)
-    protein_yield = Column(Float, nullable=False)
-    dna_yield = Column(Float, nullable=False)
-    activity_score = Column(Float)
-    mutation_count = Column(Integer)
-    created_at = Column(DateTime, nullable=False)  
-    variant_metadata = Column(String)
+    variant_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    experiment_id = db.Column(db.Integer, db.ForeignKey('Experiment.experiment_id'), nullable=False)
+    generation = db.Column(db.Integer, nullable=False)
+    plasmid_variant_index = db.Column(db.String, nullable=False)
+    parent_variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'))
+    dna_sequence = db.Column(db.String, nullable=False)
+    protein_sequence = db.Column(db.String)
+    protein_yield = db.Column(db.Float, nullable=False)
+    dna_yield = db.Column(db.Float, nullable=False)
+    activity_score = db.Column(db.Float)
+    mutation_count = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, nullable=False)
+    variant_metadata = db.Column(db.String)
 
-class Mutations(base):
+class Mutations(db.Model):
     __tablename__ = 'Mutations'
-    mutation_id = Column(Integer, primary_key=True, autoincrement=True)
-    variant_id = Column(Integer, ForeignKey('Variant.variant_id'), nullable=False)
-    position = Column(Integer, nullable=False)
-    wt_residue = Column(String, nullable=False)
-    mutant_residue = Column(String, nullable=False)
-    mutation_type = Column(String, nullable=False)
-    generation = Column(Integer, nullable=False)
-    codon_change = Column(String)
+    mutation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    wt_residue = db.Column(db.String, nullable=False)
+    mutant_residue = db.Column(db.String, nullable=False)
+    mutation_type = db.Column(db.String, nullable=False)
+    generation = db.Column(db.Integer, nullable=False)
+    codon_change = db.Column(db.String)
 
-class Activity(base):
+class Activity(db.Model):
     __tablename__ = 'Activity'
-    prediction_id = Column(Integer, primary_key=True, autoincrement=True)
-    variant_id = Column(Integer, ForeignKey('Variant.variant_id'), nullable=False)
-    predicted_activity_score = Column(Float, nullable=False)
-    model_name = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    prediction_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'), nullable=False)
+    predicted_activity_score = db.Column(db.Float, nullable=False)
+    model_name = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
 
-class Control(base):
+class Control(db.Model):
     __tablename__ = 'Control'
-    control_id = Column(Integer, primary_key=True, autoincrement=True)
-    experiment_id = Column(Integer, ForeignKey('Experiment.experiment_id'), nullable=False)
-    control_name = Column(String, nullable=False)
-    dna_sequence = Column(String, nullable=False)
-    protein_yield = Column(Float, nullable=False)
-    dna_yield = Column(Float, nullable=False)
-    activity_score = Column(Float)
-    created_at = Column(DateTime, nullable=False)
+    control_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    experiment_id = db.Column(db.Integer, db.ForeignKey('Experiment.experiment_id'), nullable=False)
+    control_name = db.Column(db.String, nullable=False)
+    dna_sequence = db.Column(db.String, nullable=False)
+    protein_yield = db.Column(db.Float, nullable=False)
+    dna_yield = db.Column(db.Float, nullable=False)
+    activity_score = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, nullable=False)
