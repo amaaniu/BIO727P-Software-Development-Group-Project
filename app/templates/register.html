@@ -39,7 +39,7 @@
           <a class="nav-link" href="{{ url_for('main.casestudy_tutorial') }}">Case Study/Tutorial</a>
             </li>
             <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
+          <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
             </li>
             <li class="nav-item">
           <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
@@ -75,6 +75,10 @@
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" name="password" required>
+              </div>
+              <div class="mb-3">
+                <label for="confirm_password" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
               </div>
               <div class="d-grid gap-2">
                 <button type="submit" class="btn bg-primary text-white">Register</button>
