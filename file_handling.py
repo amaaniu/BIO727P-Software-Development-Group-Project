@@ -9,15 +9,15 @@ ALLOWED_EXTENSIONS = {'.tsv', '.json'}
 EXPERIMENT_REQUIRED = {'experiment_name', 'uniprot_id'}
 VARIANT_REQUIRED = {'generation', 'plasmid_variant_index', 'dna_sequence', 'protein_yield', 'dna_yield'}
 MUTATION_REQUIRED = {'position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation'}
-ACTIVITY_REQUIRED = {'predicted_activity_score', 'model_name'}
-CONTROL_REQUIRED = {'control_name', 'dna_sequence', 'protein_yield', 'dna_yield'}
+ACTIVITY_REQUIRED = {'measurement_type', 'raw_value'}  # CHANGED
+CONTROL_REQUIRED = {'control_type', 'generation', 'protein_yield', 'dna_yield'}  # CHANGED
 
 # All fields for each data type
 EXPERIMENT_FIELDS = ['experiment_name', 'uniprot_id', 'wt_protein_sequence', 'protein_features', 'plasmid_sequence', 'status']
 VARIANT_FIELDS = ['generation', 'plasmid_variant_index', 'dna_sequence', 'protein_sequence', 'protein_yield', 'dna_yield', 'activity_score', 'mutation_count']
 MUTATION_FIELDS = ['position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation', 'codon_change']
-ACTIVITY_FIELDS = ['predicted_activity_score', 'model_name']
-CONTROL_FIELDS = ['control_name', 'dna_sequence', 'protein_yield', 'dna_yield', 'activity_score']
+ACTIVITY_FIELDS = ['measurement_type', 'raw_value', 'qc_pass']  # CHANGED
+CONTROL_FIELDS = ['generation', 'control_type', 'protein_yield', 'dna_yield']  # CHANGED
 
 
 def validate_file_extension(filename):
@@ -204,8 +204,8 @@ def process_activity_data(df):
             df[field] = None
 
     # Convert numeric fields
-    if 'predicted_activity_score' in df.columns:
-        df['predicted_activity_score'] = pd.to_numeric(df['predicted_activity_score'], errors='coerce')
+    if 'raw_value' in df.columns:
+        df['raw_value'] = pd.to_numeric(df['raw_value'], errors='coerce')
 
     df = df[ACTIVITY_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -230,7 +230,13 @@ def process_control_data(df):
             df[field] = None
 
     # Convert numeric fields
-    numeric_float = ['protein_yield', 'dna_yield', 'activity_score']
+    numeric_int = ['generation']
+    numeric_float = ['protein_yield', 'dna_yield']
+
+    for col in numeric_int:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+
     for col in numeric_float:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
