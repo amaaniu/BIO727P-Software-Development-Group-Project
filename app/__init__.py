@@ -1,8 +1,9 @@
 # This file initialises the Flask application and registers all of the blueprints that form the web app.
 from flask import Flask, flash, redirect, url_for, session, request
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy 
 from flask_login import LoginManager, login_user, logout_user, login_required
-from .models import User  # Import the User model
+from app import models  # Import the models to ensure they are registered with SQLAlchemy
+from ..models import User  # Import the User model
 from .main import main_bp
 from .auth import auth_bp
 

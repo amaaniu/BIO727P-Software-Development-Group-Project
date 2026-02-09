@@ -1,8 +1,8 @@
 # This file defines the routes for the authentication blueprint of the Flask application. It includes routes for user login, registration, and logout, as well as any other functionality users must login to access. The routes will render the appropriate templates and handle form submissions for user authentication processes.
 from flask import Blueprint, render_template, redirect, session, url_for, request, flash
 from flask_login import login_user, logout_user, login_required 
-#from . import db
-#from .models import User
+from ..import db
+from ..models import User
 auth_bp = Blueprint('auth', __name__)
 
 # Creates the route for the registration page
