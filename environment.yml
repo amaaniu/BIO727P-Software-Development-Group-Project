@@ -10,6 +10,7 @@ dependencies:
   - plotly
   - biopython
   - flask
+  - flask-login
   - sqlalchemy
   - requests
   - python-dotenv
@@ -18,4 +19,5 @@ dependencies:
   - pip
   - pip:
       - flask-sqlalchemy
+
 
