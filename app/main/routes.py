@@ -1,5 +1,5 @@
 # This file defines the main blueprint for the Flask application, enabling navigation between the different pages of the app.
-from flask import Blueprint, render_template, flask_login
+from flask import Blueprint, render_template
 from flask_login import login_required
 main_bp = Blueprint('main', __name__)
 
@@ -9,13 +9,6 @@ def home():
     """Renders the home page."""
 
     return render_template('index.html')
-
-# Creates the route for the registration page
-@main_bp.route('/register', methods=['GET', 'POST'])
-def register():
-    """Renders the registration page."""
-
-    return render_template('register.html')
 
 # Creates the route for the features page
 @main_bp.route('/features')
