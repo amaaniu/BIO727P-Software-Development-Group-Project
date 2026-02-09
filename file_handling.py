@@ -9,15 +9,15 @@ ALLOWED_EXTENSIONS = {'.tsv', '.json'}
 EXPERIMENT_REQUIRED = {'experiment_name', 'uniprot_id'}
 VARIANT_REQUIRED = {'generation', 'plasmid_variant_index', 'dna_sequence', 'protein_yield', 'dna_yield'}
 MUTATION_REQUIRED = {'position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation'}
-ACTIVITY_REQUIRED = {'measurement_type', 'raw_value'}  # CHANGED
-CONTROL_REQUIRED = {'control_type', 'generation', 'protein_yield', 'dna_yield'}  # CHANGED
+ACTIVITY_REQUIRED = {'measurement_type', 'raw_value'} 
+CONTROL_REQUIRED = {'control_type', 'generation', 'protein_yield', 'dna_yield'}  
 
 # All fields for each data type
 EXPERIMENT_FIELDS = ['experiment_name', 'uniprot_id', 'wt_protein_sequence', 'protein_features', 'plasmid_sequence', 'status']
 VARIANT_FIELDS = ['generation', 'plasmid_variant_index', 'dna_sequence', 'protein_sequence', 'protein_yield', 'dna_yield', 'activity_score', 'mutation_count']
 MUTATION_FIELDS = ['position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation', 'codon_change']
-ACTIVITY_FIELDS = ['measurement_type', 'raw_value', 'qc_pass']  # CHANGED
-CONTROL_FIELDS = ['generation', 'control_type', 'protein_yield', 'dna_yield']  # CHANGED
+ACTIVITY_FIELDS = ['measurement_type', 'raw_value', 'qc_pass']  
+CONTROL_FIELDS = ['generation', 'control_type', 'protein_yield', 'dna_yield']  
 
 
 def validate_file_extension(filename):
