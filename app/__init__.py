@@ -1,11 +1,12 @@
 # This file initialises the Flask application and registers all of the blueprints that form the web app.
-from flask import Flask, flash, redirect, url_for, session, request
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy 
 from flask_login import LoginManager, login_user, logout_user, login_required
-from app import models  # Import the models to ensure they are registered with SQLAlchemy
-from ..models import User  # Import the User model
+
+from .models import User  # Import the User model
 from .main import main_bp
 from .auth import auth_bp
+from . import db  # Import the database instance from the current package
 
 
 def create_app():
@@ -14,6 +15,7 @@ def create_app():
     app.config['SECRET_KEY'] = 'dev-key' # In production, use an actual secret key for security purposes.
     
     login_manager.init_app(app)  # Initialises Flask-Login with the Flask application
+    db.init_app(app)  # Initialises SQLAlchemy with the Flask application
 
     app.register_blueprint(main_bp)  # Register the main blueprint with a URL prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes

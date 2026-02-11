@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, session, url_for, reques
 from flask_login import login_user, logout_user, current_user
 from app import db
 from app.models import User
+
 auth_bp = Blueprint('auth', __name__)
 
 # Creates the route for the registration page

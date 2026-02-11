@@ -1,6 +1,7 @@
-# This file defines the main blueprint for the Flask application, enabling navigation between the different pages of the app.
+# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, case study tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
 from flask import Blueprint, render_template
 from flask_login import login_required
+
 main_bp = Blueprint('main', __name__)
 
 # Creates the route for the home page
