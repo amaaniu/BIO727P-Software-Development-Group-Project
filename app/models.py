@@ -14,7 +14,12 @@ class User(db.Model, UserMixin):
     
     # Relationships
     experiments = db.relationship('Experiment', backref='user', lazy='dynamic')
-
+    
+    # Flask-Login requires a method to get the user ID, which is used to manage user sessions. Since the primary key column is named 'user_id' instead of the default 'id', we need to define the get_id method to return the user_id as a string for Flask-Login to function correctly. 
+    # The alternative is to set the primary key column name to 'id' and Flask-Login will automatically use it without needing to define a get_id method. However, since the primary key column is named 'user_id', we need to define the get_id method to return the user_id as a string for Flask-Login to function correctly.
+    def get_id(self):
+        return str(self.user_id)
+    
 class Experiment(db.Model):
     __tablename__ = 'Experiment'
     experiment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

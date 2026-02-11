@@ -32,10 +32,10 @@ def casestudy_tutorial():
 
     return 'soon rendering template casestudy tutorial'
 
-# Creates the route for the dashboard page, which is only accessible to authenticated users
-@main_bp.route('/dashboard')
+# Creates the route for the dashboard page, which is only accessible to authenticated users. Username is displayed on the dashboard page.
+@main_bp.route('/dashboard/<username>')
 @login_required
-def dashboard():
+def dashboard(username):
     """Renders the dashboard page, after user is authenticated."""
 
-    return render_template('dashboard.html')
+    return render_template('dashboard.html', username=username)

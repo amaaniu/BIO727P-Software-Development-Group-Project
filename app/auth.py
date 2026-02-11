@@ -1,10 +1,11 @@
 # This file has the file defines the routes for the authentication blueprint of the Flask application.
 # It includes routes for user login, registration, and logout, as well as any other functionality users must login to access. 
-from flask import Blueprint, render_template, redirect, session, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from app.models import User
+from sqlalchemy import or_
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -45,7 +46,7 @@ def register():
         db.session.commit()
 
         login_user(user)  # Logs the user in immediately after successful registration
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.dashboard", username=user.username))
         
     return render_template('register.html')
 
@@ -56,27 +57,30 @@ def login():
     
      # Immediately after a successful login, the user is redirected to the dashboard page. If the user is already authenticated and tries to access the login page, they are also redirected to the dashboard page to prevent them from logging in again.
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('main.dashboard', username=current_user.username))
         
     if request.method == 'POST':
         # Handles the login form submission by retrieving the email and password from the form data
-        email = request.form.get('email')
+        username = request.form.get('username') 
+        email = request.form.get('email').lower()
         password = request.form.get('password')
 
-        # The application checks if the provided email exists in the database and if the password is correct. If the credentials are valid, the user is logged in and redirected to the dashboard page.
-        user = db.session.scalar(db.select(User).filter_by(email=email))
+        # The user is queried from the database based on the provided email or username. If a user is found and the provided password matches the stored password hash, the user is logged in and redirected to the dashboard page.
+        user = db.session.scalar(db.select(User).where(or_(User.email == email, User.username == username))) # Allow login with either email or username
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('main.dashboard', username=user.username))  # Pass the username as a parameter to the dashboard route
         
         # If the credentials are invalid, an error message appears and the user is prompted to try again
         flash('Invalid email or password. Please try again.', 'danger') #Uses Flask's flash function to display an error message to the user in bootstrap's alert format
         
     return render_template('login.html')
 
+
 # Creates the route for the logout functionality
-@auth_bp.route('/logout', methods=['GET', 'POST'])
+@auth_bp.route('/logout')
 def logout():
     """Handles user logout."""
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('main.home'))
