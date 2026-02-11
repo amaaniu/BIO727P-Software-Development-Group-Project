@@ -1,15 +1,15 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from flask_login import UserMixin
+from datetime import datetime, timezone
+from . import db
 
-db = SQLAlchemy()
-
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'User'
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Text, nullable=False, unique=True)
-    email = db.Column(db.Text, nullable=False)
+    email = db.Column(db.Text, nullable=False, unique=True)
     password_hash = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime)
     
     # Relationships
@@ -24,7 +24,7 @@ class Experiment(db.Model):
     wt_protein_sequence = db.Column(db.Text)
     protein_features = db.Column(db.Text)
     plasmid_sequence = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.Text)
     
     # Relationships
@@ -44,7 +44,7 @@ class Variant(db.Model):
     dna_yield = db.Column(db.Float, nullable=False)
     activity_score = db.Column(db.Float)
     mutation_count = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     custom_metadata = db.Column(db.Text)  # ✓ FIXED - matches DB column name
     
     # Relationships

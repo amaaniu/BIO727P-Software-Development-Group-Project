@@ -1,7 +1,9 @@
-# This file defines the routes for the authentication blueprint of the Flask application. It includes routes for user login, registration, and logout, as well as any other functionality users must login to access. The routes will render the appropriate templates and handle form submissions for user authentication processes.
+# This file has the file defines the routes for the authentication blueprint of the Flask application.
+# It includes routes for user login, registration, and logout, as well as any other functionality users must login to access. 
 from flask import Blueprint, render_template, redirect, session, url_for, request, flash
 from flask_login import login_user, logout_user, current_user
-from app import db
+from werkzeug.security import generate_password_hash, check_password_hash
+from . import db
 from app.models import User
 
 auth_bp = Blueprint('auth', __name__)
@@ -14,17 +16,19 @@ def register():
     if request.method == 'POST':
         # Handles the registration form submission by retrieving the email, password, and confirmed password from the form data
         username = request.form.get('username')
-        email = request.form.get('email')
+        email = request.form.get('email').lower()  
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
-        # Checks if username already exists
-        if User.query.filter_by(username=username).first():
+        # Checks if username is already in use
+        existing_user = db.session.scalar(db.select(User).filter_by(username=username))
+        if existing_user:
             flash("Username already exists", 'danger')
             return render_template('register.html', email=email)  # Pre-fill the email field to avoid making the user re-enter it
         
         # Checks if email is already registered
-        if User.query.filter_by(email=email).first():
+        existing_email = db.session.scalar(db.select(User).filter_by(email=email))
+        if existing_email:
             flash("Email already exists", 'danger')
             return render_template('register.html', username=username)  # Pre-fill the username field to avoid making the user re-enter it
         
@@ -35,8 +39,7 @@ def register():
            
         # A new user is created with the provided username and password, and the password is hashed for security. 
         # The user is then added to the database and committed. After successful registration, the user is automatically logged in and redirected to the dashboard page.
-        user = User(username=username, email=email) 
-        user.set_password(password)
+        user = User(username=username, email=email, password_hash=generate_password_hash(password)) 
 
         db.session.add(user)
         db.session.commit()
@@ -50,24 +53,24 @@ def register():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Renders the login page and handles user login."""
-
+    
+     # Immediately after a successful login, the user is redirected to the dashboard page. If the user is already authenticated and tries to access the login page, they are also redirected to the dashboard page to prevent them from logging in again.
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+        
     if request.method == 'POST':
         # Handles the login form submission by retrieving the email and password from the form data
         email = request.form.get('email')
         password = request.form.get('password')
 
         # The application checks if the provided email exists in the database and if the password is correct. If the credentials are valid, the user is logged in and redirected to the dashboard page.
-        user = User.query.filter_by(email=email).first()
-        if user and user.check_password(password):
+        user = db.session.scalar(db.select(User).filter_by(email=email))
+        if user and check_password_hash(user.password_hash, password):
             login_user(user)
             return redirect(url_for('main.dashboard'))
         
         # If the credentials are invalid, an error message appears and the user is prompted to try again
         flash('Invalid email or password. Please try again.', 'danger') #Uses Flask's flash function to display an error message to the user in bootstrap's alert format
-    
-        # If the user is already authenticated, they are redirected to the dashboard page without needing to log in again. This prevents authenticated users from accessing the login page unnecessarily.
-        if current_user.is_authenticated:
-            return redirect(url_for('main.dashboard'))
         
     return render_template('login.html')
 
@@ -75,9 +78,5 @@ def login():
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
     """Handles user logout."""
-    
-    session.clear() 
-    logout_user()  # Logs the user out by clearing the session and calling Flask-Login's logout_user function, 
-    #which will remove the user's authentication information from the session.
-    # After logging out, you would redirect them to the home page or login page
+    logout_user()
     return redirect(url_for('main.home'))
