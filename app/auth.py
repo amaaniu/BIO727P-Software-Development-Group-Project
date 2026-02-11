@@ -21,17 +21,17 @@ def register():
         # Checks if username already exists
         if User.query.filter_by(username=username).first():
             flash("Username already exists", 'danger')
-            return redirect(url_for("auth.register"))
+            return render_template('register.html', email=email)  # Pre-fill the email field to avoid making the user re-enter it
         
         # Checks if email is already registered
         if User.query.filter_by(email=email).first():
             flash("Email already exists", 'danger')
-            return redirect(url_for("auth.register"))
+            return render_template('register.html', username=username)  # Pre-fill the username field to avoid making the user re-enter it
         
         # Checks if password and confirm password match. If not, the user is prompted to try again
         if password != confirm_password:
             flash("Passwords do not match", 'danger')
-            return redirect(url_for("auth.register"))
+            return render_template('register.html', username=username, email=email)
            
         # A new user is created with the provided username and password, and the password is hashed for security. 
         # The user is then added to the database and committed. After successful registration, the user is automatically logged in and redirected to the dashboard page.
@@ -72,7 +72,7 @@ def login():
     return render_template('login.html')
 
 # Creates the route for the logout functionality
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
     """Handles user logout."""
     

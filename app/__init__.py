@@ -3,17 +3,18 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy 
 from flask_login import LoginManager, login_user, logout_user, login_required
 
-from .models import User  # Import the User model
+from .models import User, db  # Import the User model
 from .main import main_bp
 from .auth import auth_bp
-from . import db  # Import the database instance from the current package
+
 
 
 def create_app():
     """Creates and configures the Flask applicationfrom all of the registered blueprints."""
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'dev-key' # In production, use an actual secret key for security purposes.
-    
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'  # Configures the database URI for SQLAlchemy
+
     login_manager.init_app(app)  # Initialises Flask-Login with the Flask application
     db.init_app(app)  # Initialises SQLAlchemy with the Flask application
 
@@ -21,6 +22,9 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes
     #app.register_blueprint(other_blueprint)  # Register other blueprints as needed
     
+    with app.app_context():
+        db.create_all()  # Creates the database tables based on the defined models if they do not already exist
+
     return app
 
 # Sets up Flask-Login for user authentication and session management. The login view is set to the login route defined in the auth blueprint, and a user loader function is defined to load the user from the database based on the user ID stored in the session.

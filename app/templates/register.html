@@ -63,7 +63,7 @@
             <h2>Register Here</h2>
           </div>
           <div class="card-body">
-            <form method="POST" action="{{ url_for('main.register') }}">
+            <form method="POST" action="{{ url_for('auth.register') }}">
               <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input type="text" class="form-control" id="username" name="username" required>
@@ -90,6 +90,17 @@
       </div>
     </div>
   </div>
+
+<!-- Displays any error messages that are generated during the registration process -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
 </main>
 
