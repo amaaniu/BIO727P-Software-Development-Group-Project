@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for
-from matplotlib import lines, text
-from matplotlib import text
+
 import requests
 
 # Flask setup- for testing purposes only, will be removed when integrated with final_page/app.py
@@ -70,17 +69,23 @@ def fetch_uniprot(accession):
 class FastaError(ValueError):
     pass
 
-def parse_fasta(text):
+def parse_fasta(fasta_text):
     """ Parse a FASTA string that must contain exactly ONE record.
     Returns: (header, sequence) with sequence uppercased and whitespace removed."""
 
-    if not text or not text.strip():
+    if not fasta_text or not fasta_text.strip():
         raise FastaError("Empty FASTA file.")  
 
     # DNA letters allowed in plasmid FASTA (includes common ambiguity codes)
     allowed = set("ACGTNRYKMSWBDHV")
 
+    header = None
+    header_count = 0
+    seq_parts = []
+
     line_number = 0
+
+    lines = fasta_text.splitlines()
 
     for raw in lines:
         line_number += 1
@@ -129,4 +134,30 @@ def parse_fasta(text):
         raise FastaError("No sequence found under the FASTA header.")
 
     return header, sequence
+
+from orf_translation import six_frame_orfs, pick_longest_orf
+
+
+def match_wt_exact(orfs, wt_protein):
+
+    wt = wt_protein.strip().upper()
+
+    for orf in orfs:
+        protein = orf["protein"]
+
+        if protein.upper() == wt:
+            return {
+                "match": True,
+                "reason": "Exact ORF match to WT found.",
+                "matching_frame": orf["frame"],
+                "matching_length": len(protein)
+            }
+
+    return {
+        "match": False,
+        "reason": "No translated ORF matched WT exactly.",
+        "orfs_found": len(orfs),
+        "wt_length_aa": len(wt),
+        "longest_orf_aa": max((len(o["protein"]) for o in orfs), default=0),
+    }
 
