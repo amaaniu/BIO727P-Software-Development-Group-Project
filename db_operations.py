@@ -175,7 +175,7 @@ def process_and_insert(file, experiment_id=None, user_id=None):
     Raises:
         ValueError: If required IDs not provided or insertion fails
     """
-    from file_processor import process_file
+    from file_handling import process_file
     
     # Process file
     result = process_file(file)
