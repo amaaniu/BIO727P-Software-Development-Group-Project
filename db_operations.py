@@ -62,7 +62,7 @@ def insert_variant_records(records, experiment_id):
             activity_score=record.get('activity_score'),
             mutation_count=record.get('mutation_count'),
             created_at=datetime.utcnow(),
-            metadata=None  
+            metadata_=None
         )
         
         db.session.add(variant)
