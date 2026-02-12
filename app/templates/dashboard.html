@@ -75,32 +75,16 @@
     <div class="row justify-content-center">
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
+                <div class="card-body p-4 mb-4 ">
                     <h5 class="fw-bold">Staging</h5>
                     <p class="card-text mb-0">Click here to upload your FASTA data and start a new analysis.</p>
+                    <a href="/experiments/new" class="btn btn-primary mt-3">Stage New Experiment +</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- QUICK ACTIONS BAR -->
-<section class="container-fluid mt-4 mb-4">
-    <div class=" card border-0 shadow-sm p-4 d-flex flex-column flex-md-row align-items-stretch gap-3">
-        <a href="/experiments/new" class="btn btn-outline-primary border-0 d-flex align-items-center gap-2">
-            <i class="bi bi-plus-circle"></i> <span>Stage New Experiment</span>
-        </a>
-        <a href="/data-imports" class="btn btn-outline-secondary border-0 d-flex align-items-center gap-2">
-            <i class="bi bi-cloud-upload"></i> <span>Import Screening Data</span>
-        </a>
-        <a href="/analysis/compare" class="btn btn-outline-secondary border-0 d-flex align-items-center gap-2">
-            <i class="bi bi-intersect"></i> <span>Compare Variants</span>
-        </a>
-        <a href="/templates" class="btn btn-outline-secondary border-0 d-flex align-items-center gap-2">
-            <i class="bi bi-layers"></i> <span>Browse Templates</span>
-        </a>
-    </div>
-</section>
 
 <!-- EXPERIMENTS PANEL -->
 <section class="container-fluid">
@@ -124,7 +108,7 @@
                         <th class="ps-4">Experiment</th>
                         <th>UniProt ID</th>
                         <th>Target Protein</th>
-                        <th>Round</th>
+                        <th>Generations</th>
                         <th>Status</th>
                         <th>Last Updated</th>
                         <th class="text-end pe-4">Actions</th>
@@ -135,7 +119,7 @@
                         <td class="ps-4"><span class="badge bg-light text-dark border fw-mono">EXP-2024-042</span></td>
                         <td><code class="text-primary fw-bold">P04637</code></td>
                         <td>p53 Tumour Suppressor</td>
-                        <td><span class="badge rounded-pill bg-info text-dark">R5 / 8</span></td>
+                        <td><span class="badge rounded-pill bg-info text-dark"> 10 </span></td>
                         <td><span class="badge bg-success-subtle text-success border border-success-subtle">Active</span></td>
                         <td class="text-muted small">2 hours ago</td>
                         <td class="text-end pe-4">
