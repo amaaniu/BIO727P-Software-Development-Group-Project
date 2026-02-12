@@ -44,7 +44,7 @@ class Variant(db.Model):
     activity_score = db.Column(db.Float)
     mutation_count = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    metadata = db.Column(db.Text)  # ✓ FIXED - matches DB column name
+    metadata_ = db.Column('metadata', db.Text)  # 'metadata' is reserved in SQLAlchemy, use metadata_ as attribute
     
     # Relationships
     mutations = db.relationship('Mutations', backref='variant', lazy='dynamic')
