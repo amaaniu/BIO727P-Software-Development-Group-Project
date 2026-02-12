@@ -8,9 +8,9 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div>
         <span class="section-badge section-badge-accent">Staging</span>
-        <h1 class="h3 mb-1">Validate inputs before analysis</h1>
+        <h1 class="h3 mb-1">Data upload</h1>
         <p class="text-muted mb-0">
-          1) UniProt → 2) Plasmid FASTA → 3) JSON/TSV upload
+          1) UniProt ID → 2) Plasmid FASTA → 3) JSON/TSV upload
         </p>
       </div>
     </div>
@@ -27,7 +27,7 @@
           </div>
           <div class="col-12 col-md-4 d-grid">
             <button id="btnFetch" type="button" class="btn btn-primary">
-              Fetch
+              Search
             </button>
           </div>
         </div>
@@ -90,11 +90,6 @@
             >
             <div class="form-text">Accepted: .fa .fasta .fna .txt</div>
           </div>
-          <div class="col-12 col-md-4">
-            <div class="alert alert-info py-2 mb-0 small">
-              Upload appears only after UniProt succeeds.
-            </div>
-          </div>
         </div>
 
         <div id="fastaStatus" class="mt-3 small"></div>
@@ -116,11 +111,6 @@
               accept=".json,.tsv"
             >
             <div class="form-text">Accepted: .json .tsv</div>
-          </div>
-          <div class="col-12 col-md-4">
-            <div class="alert alert-success py-2 mb-0 small">
-              This appears only after FASTA matches WT.
-            </div>
           </div>
         </div>
 
@@ -215,7 +205,7 @@
       const wt = data.wt;
       wtSequence = wt.sequence;
 
-      setStatus(uniprotStatus, "success", "UniProt ID valid ✅");
+      setStatus(uniprotStatus, "success", "UniProt ID valid ");
       step2.style.display = "block";
       uniprotDetailsWrap.style.display = "block";
 
@@ -223,11 +213,26 @@
         <div class="mb-2">
           <strong>${wt.protein_name}</strong>
         </div>
-        <div class="text-muted">
+
+        <div class="text-muted mb-3">
           <span class="me-3"><strong>Accession:</strong> ${wt.accession}</span>
           <span><strong>Length:</strong> ${wt.sequence_length} aa</span>
-        </div>
-      `;
+        </div>  
+        <div class="row g-3 align-items-start">
+          <div class="col-12 col-lg-6">
+            <div class="small text-muted mb-2">Predicted structure (AlphaFold)</div>
+            <img
+              src="https://alphafold.ebi.ac.uk/files/AF-${wt.accession}-F1-model_v4.png"
+              alt="Predicted structure"
+              class="img-fluid rounded shadow-sm"
+              onerror="this.style.display='none'">
+            <div class="small mt-2">
+              <a href="https://alphafold.ebi.ac.uk/entry/${wt.accession}" target="_blank">
+                Open on AlphaFold
+              </a>
+            </div>
+          </div>
+        </div> `;
 
       // Feature table
       const feats = wt.features || [];
@@ -308,7 +313,7 @@
       setStatus(
         fastaStatus,
         "success",
-        `FASTA valid ✅ and matches WT ✅ (${data.dna_length_bp} bp)`
+        `FASTA valid and matches WT (${data.dna_length_bp} bp)`
       );
 
       step3.style.display = "block";
@@ -344,7 +349,7 @@
       setStatus(
         dataStatus,
         "success",
-        `File valid ✅ (${data.data_type}, ${data.record_count} records)`
+        `File valid `
       );
 
     } catch (err) {

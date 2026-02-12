@@ -5,6 +5,151 @@ from werkzeug.utils import secure_filename
 
 ALLOWED_EXTENSIONS = {'.tsv', '.json'}
 
+# Mapping: lowercase variation → canonical database field name.
+# Columns are lowercased before lookup, so only lowercase keys are needed.
+COLUMN_NAME_MAP = {
+    # --- Variant fields ---
+    # generation
+    'directed_evolution_generation': 'generation',
+    'evolution_generation': 'generation',
+    'gen': 'generation',
+    'round': 'generation',
+    # plasmid_variant_index
+    'plasmid_variant_index': 'plasmid_variant_index',
+    'variant_index': 'plasmid_variant_index',
+    'plasmid_index': 'plasmid_variant_index',
+    'variant_id_index': 'plasmid_variant_index',
+    # dna_sequence
+    'assembled_dna_sequence': 'dna_sequence',
+    'assembled_sequence': 'dna_sequence',
+    'dna_seq': 'dna_sequence',
+    'variant_dna_sequence': 'dna_sequence',
+    # protein_yield
+    'protein_quantification_pg': 'protein_yield',
+    'protein_quantification': 'protein_yield',
+    'protein_quantity': 'protein_yield',
+    'protein_quant': 'protein_yield',
+    'protein_concentration': 'protein_yield',
+    'protein_amount': 'protein_yield',
+    # dna_yield
+    'dna_quantification_fg': 'dna_yield',
+    'dna_quantification_f': 'dna_yield',
+    'dna_quantification': 'dna_yield',
+    'dna_quantity': 'dna_yield',
+    'dna_quant': 'dna_yield',
+    'dna_concentration': 'dna_yield',
+    'dna_amount': 'dna_yield',
+    # protein_sequence
+    'translated_protein_sequence': 'protein_sequence',
+    'protein_seq': 'protein_sequence',
+    'variant_protein_sequence': 'protein_sequence',
+    # activity_score
+    'activity': 'activity_score',
+    'score': 'activity_score',
+    # mutation_count
+    'number_of_mutations': 'mutation_count',
+    'num_mutations': 'mutation_count',
+    'total_mutations': 'mutation_count',
+    # parent_variant_id  (not in VARIANT_REQUIRED but useful to capture)
+    'parent_plasmid_variant': 'parent_variant_id',
+    'parent_variant': 'parent_variant_id',
+    'parent': 'parent_variant_id',
+
+    # --- Experiment fields ---
+    # experiment_name
+    'experiment': 'experiment_name',
+    'exp_name': 'experiment_name',
+    'name': 'experiment_name',
+    # uniprot_id
+    'uniprot': 'uniprot_id',
+    'uniprotid': 'uniprot_id',
+    'uniprot_accession': 'uniprot_id',
+    'accession': 'uniprot_id',
+    'uniprot_entry': 'uniprot_id',
+    # wt_protein_sequence
+    'wild_type_protein_sequence': 'wt_protein_sequence',
+    'wildtype_protein_sequence': 'wt_protein_sequence',
+    'wt_sequence': 'wt_protein_sequence',
+    'wt_seq': 'wt_protein_sequence',
+    'wild_type_sequence': 'wt_protein_sequence',
+    # protein_features
+    'features': 'protein_features',
+    # plasmid_sequence
+    'wt_plasmid_sequence': 'plasmid_sequence',
+    'plasmid_seq': 'plasmid_sequence',
+    'plasmid_dna_sequence': 'plasmid_sequence',
+
+    # --- Mutation fields ---
+    # position
+    'mutation_position': 'position',
+    'residue_position': 'position',
+    'residue_number': 'position',
+    'pos': 'position',
+    # wt_residue
+    'wild_type_residue': 'wt_residue',
+    'wildtype_residue': 'wt_residue',
+    'original_residue': 'wt_residue',
+    'wt_amino_acid': 'wt_residue',
+    'from_residue': 'wt_residue',
+    # mutant_residue
+    'mut_residue': 'mutant_residue',
+    'new_residue': 'mutant_residue',
+    'substituted_residue': 'mutant_residue',
+    'mutant_amino_acid': 'mutant_residue',
+    'to_residue': 'mutant_residue',
+    # mutation_type
+    'type_of_mutation': 'mutation_type',
+    'mut_type': 'mutation_type',
+    # codon_change
+    'codon_substitution': 'codon_change',
+    'codon': 'codon_change',
+
+    # --- Activity fields ---
+    # measurement_type
+    'assay_type': 'measurement_type',
+    'measurement': 'measurement_type',
+    'assay': 'measurement_type',
+    # raw_value
+    'value': 'raw_value',
+    'measurement_value': 'raw_value',
+    'raw_measurement': 'raw_value',
+    'result': 'raw_value',
+    # qc_pass
+    'qc': 'qc_pass',
+    'quality_control': 'qc_pass',
+    'quality_control_pass': 'qc_pass',
+
+    # --- Control fields ---
+    # control_type
+    'control': 'control_type',
+    'control_name': 'control_type',
+}
+
+
+def normalize_columns(df):
+    """
+    Normalize DataFrame column names to canonical database field names.
+
+    Steps:
+        1. Strip whitespace and lowercase all column names
+        2. Replace spaces with underscores
+        3. Map known aliases to canonical names via COLUMN_NAME_MAP
+
+    Args:
+        df: pandas DataFrame with raw column names
+
+    Returns:
+        DataFrame with normalized column names
+    """
+    # Lowercase, strip whitespace, replace spaces with underscores
+    df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
+
+    # Apply alias mapping (unmapped columns stay as-is)
+    df.columns = [COLUMN_NAME_MAP.get(col, col) for col in df.columns]
+
+    return df
+
+
 # Required fields for each data type (fields that cannot be None)
 EXPERIMENT_REQUIRED = {'experiment_name', 'uniprot_id'}
 VARIANT_REQUIRED = {'generation', 'plasmid_variant_index', 'dna_sequence', 'protein_yield', 'dna_yield'}
@@ -273,6 +418,9 @@ def process_file(file):
         df = parse_tsv(file_content)
     elif extension == '.json':
         df = parse_json(file_content)
+
+    # Normalize column names to canonical database field names
+    df = normalize_columns(df)
 
     # Detect data type
     data_type = detect_data_type(df)
