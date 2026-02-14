@@ -41,16 +41,6 @@ body {
   }
 }
 
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 25px rgba(30, 107, 127, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 50px rgba(62, 186, 196, 0.8);
-  }
-}
-
-
 @keyframes cardHover {
   from {
     transform: translateY(0);
@@ -65,21 +55,18 @@ body {
   animation: slideUp 0.3s ease-out;
   transition: all 0.3s ease;
   border-radius: 8px;
-  box-shadow: 0 0 15px rgba(30, 107, 127, 0.2);
+  box-shadow: 0 2px 10px rgba(30, 107, 127, 0.14);
 }
 
 .card:hover {
-  box-shadow: 0 0 25px rgba(62, 186, 196, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(30, 107, 127, 0.2) !important;
 }
 
 .card.selected {
-  box-shadow: 0 0 25px rgba(62, 186, 196, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(42, 188, 207, 0.22) !important;
   border: 1px solid var(--color-accent);
 }
 
-.card.selected .feature-icon i {
-  animation: glow 0.6s ease-in-out;
-}
 /* Feature Icon Styling */
 .feature-icon {
   margin-bottom: 1rem;
@@ -207,9 +194,36 @@ body {
 .btn-primary {
   background-color: var(--color-accent);
   border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
 }
 
 .btn-secondary {
   background-color: var(--color-accent-dark);
   border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active,
+.show > .btn-secondary.dropdown-toggle {
+  background-color: var(--color-primary);
+  border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
 }

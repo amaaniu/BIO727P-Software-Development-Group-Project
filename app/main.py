@@ -1,4 +1,4 @@
-# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, case study tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
+# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
 from flask import Blueprint, render_template
 from flask_login import login_required
 
@@ -25,17 +25,17 @@ def documentation():
 
     return 'soon rendering template documentation'
 
-# Creates the route for the case study tutorial page
-@main_bp.route('/casestudy_tutorial')
-def casestudy_tutorial():
-    """Renders the case study tutorial page."""
+# Creates the route for the tutorial page
+@main_bp.route('/tutorial')
+def tutorial():
+    """Renders the tutorial page."""
 
-    return 'soon rendering template casestudy tutorial'
+    return 'soon rendering template tutorial'
 
-# Creates the route for the dashboard page, which is only accessible to authenticated users. Username is displayed on the dashboard page.
-@main_bp.route('/dashboard/<username>')
+# Creates the route for the dashboard page, which is only accessible to authenticated users.
+@main_bp.route('/dashboard')
 @login_required
-def dashboard(username):
+def dashboard():
     """Renders the dashboard page, after user is authenticated."""
 
-    return render_template('dashboard.html', username=username)
+    return render_template('dashboard.html')
