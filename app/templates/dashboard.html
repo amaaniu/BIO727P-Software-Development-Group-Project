@@ -13,60 +13,151 @@
   </div>
 </div>
 
-<div class="container mt-4"> 
-    <div class="row justify-content-center">
+<div class="container mt-1"> 
+    <div class="text-center mb-3">
+      <span class="section-badge section-badge-accent">Experiment Setup</span>
+    </div>
+    <div class="row justify-content-center gy-4">
         <div class="col-xl-6">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card action-card border-0 shadow-sm h-100 reveal-up">
                 <div class="card-body p-4 mb-4 ">
-                    <h5 class="fw-bold">Staging</h5>
-                    <p class="card-text mb-0">Click here to upload your FASTA data and start a new analysis.</p>
-                    <a href="/experiments/new" class="btn btn-primary mt-3">Stage New Experiment +</a>
+                    <h5 class="fw-bold">Stage New Experiment</h5>
+                    <p class="card-text mb-0">Click here to upload your UniProt ID and experimental data, and start a new analysis.</p>
+                    <a href="/experiments/new" class="btn btn-primary mt-3">Upload Your Data +</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<section class="container mt-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Progress Snapshot</span>
+  </div>
+  <div class="row gx-3 gy-4">
+    <div class="col-6 col-md-3">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-1">
+        <div class="card-body">
+          <p class="text-muted small mb-1">All Experiments</p>
+          <h4 class="mb-0">{{ totals.all }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-2">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Ongoing</p>
+          <h4 class="mb-0">{{ totals.ongoing }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-3">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Paused</p>
+          <h4 class="mb-0">{{ totals.paused }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-4">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Completed</p>
+          <h4 class="mb-0">{{ totals.completed }}</h4>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="container-fluid">
-    <div class="card border-0 shadow-sm mt-4 mb-4">
-        <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+<section class="container mt-5">
+    <div class="card data-card border-0 shadow-sm mt-4 mb-5 reveal-up">
+        <div class="card-header dashboard-head py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <h5 class="mb-0 fw-bold">Experiments</h5>
-                <p class="text-muted small mb-0">Active and recent directed evolution campaigns</p>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-beaker-fill"></i>
+                  <h3 class="mb-0 fw-bold">Experiment Tracker</h3>
+                </div>
+                <p class="small mb-0">Ongoing and recent directed evolution campaigns</p>
             </div>
-            <ul class="nav nav-pills nav-fill bg-light rounded p-1" style="font-size: 0.85rem;">
-                <li class="nav-item"><a class="nav-link active py-1" href="#">All</a></li>
-                <li class="nav-item"><a class="nav-link py-1 text-secondary" href="#">Active</a></li>
-                <li class="nav-item"><a class="nav-link py-1 text-secondary" href="#">Paused</a></li>
-                <li class="nav-item"><a class="nav-link py-1 text-secondary" href="#">Completed</a></li>
+            <ul class="nav nav-pills nav-fill bg-light rounded p-1 dashboard-filters" style="font-size: 0.85rem;">
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'all' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='all', q=search_query, sort=sort_by, dir=sort_dir) }}">All</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'ongoing' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='ongoing', q=search_query, sort=sort_by, dir=sort_dir) }}">Ongoing</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'paused' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='paused', q=search_query, sort=sort_by, dir=sort_dir) }}">Paused</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'completed' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='completed', q=search_query, sort=sort_by, dir=sort_dir) }}">Completed</a></li>
             </ul>
         </div>
+        <div class="card-body border-bottom py-3">
+            <form method="GET" action="{{ url_for('main.dashboard') }}" class="row g-2 align-items-end">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <div class="col-12 col-md-5">
+                    <label for="q" class="form-label small text-muted mb-1">Search</label>
+                    <input id="q" name="q" type="text" class="form-control form-control-sm" placeholder="Experiment name or UniProt ID" value="{{ search_query }}">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="sort" class="form-label small text-muted mb-1">Sort By</label>
+                    <select id="sort" name="sort" class="form-select form-select-sm">
+                        <option value="updated" {% if sort_by == 'updated' %}selected{% endif %}>Last Updated</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                        <option value="generations" {% if sort_by == 'generations' %}selected{% endif %}>Generations</option>
+                        <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="dir" class="form-label small text-muted mb-1">Direction</label>
+                    <select id="dir" name="dir" class="form-select form-select-sm">
+                        <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Desc</option>
+                        <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Asc</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                </div>
+            </form>
+        </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-sm table-hover align-middle mb-0 dashboard-table">
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">Experiment</th>
                         <th>UniProt ID</th>
-                        <th>Target Protein</th>
+                        <th class="d-none d-md-table-cell">Variants</th>
                         <th>Generations</th>
                         <th>Status</th>
-                        <th>Last Updated</th>
-                        <th class="text-end pe-4">Actions</th>
+                        <th class="d-none d-lg-table-cell">Last Updated</th>
+                        <th class="text-end pe-4">Action</th>
                     </tr>
                 </thead>
                 <tbody>
+                {% if experiments %}
+                  {% for exp in experiments %}
                     <tr>
-                        <td class="ps-4"><span class="badge bg-light text-dark border fw-mono">EXP-2024-042</span></td>
-                        <td><code class="text-primary fw-bold">P04637</code></td>
-                        <td>p53 Tumour Suppressor</td>
-                        <td><span class="badge rounded-pill bg-info text-dark"> 10 </span></td>
-                        <td><span class="badge bg-success-subtle text-success border border-success-subtle">Active</span></td>
-                        <td class="text-muted small">2 hours ago</td>
+                        <td class="ps-4 col-exp">{{ exp.experiment_name }}</td>
+                        <td class="col-id"><code class="text-primary fw-bold">{{ exp.uniprot_id }}</code></td>
+                        <td class="d-none d-md-table-cell">{{ exp.variant_count }}</td>
+                        <td><span class="badge rounded-pill bg-info text-dark">{{ exp.max_generation }}</span></td>
+                        <td class="col-status">
+                          {% if exp.status == 'Completed' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ exp.status }}</span>
+                          {% elif exp.status == 'Paused' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ exp.status }}</span>
+                          {% elif exp.status == 'Ongoing' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ exp.status }}</span>
+                          {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ exp.status }}</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-muted small d-none d-lg-table-cell">{{ exp.last_updated.strftime('%Y-%m-%d') if exp.last_updated else 'N/A' }}</td>
                         <td class="text-end pe-4">
-                            <button class="btn btn-sm btn-light"><i class="bi bi-three-dots"></i></button>
+                          <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">View Report</a>
                         </td>
                     </tr>
+                  {% endfor %}
+                {% else %}
+                    <tr>
+                      <td class="ps-4 text-muted" colspan="7">No experiments match this view yet. Start by staging your first experiment.</td>
+                    </tr>
+                {% endif %}
                 </tbody>
             </table>
         </div>
