@@ -46,16 +46,16 @@
     <div class="col-6 col-md-3">
       <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-2">
         <div class="card-body">
-          <p class="text-muted small mb-1">Ongoing</p>
-          <h4 class="mb-0">{{ totals.ongoing }}</h4>
+          <p class="text-muted small mb-1">Staged</p>
+          <h4 class="mb-0">{{ totals.staged }}</h4>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-3">
         <div class="card-body">
-          <p class="text-muted small mb-1">Paused</p>
-          <h4 class="mb-0">{{ totals.paused }}</h4>
+          <p class="text-muted small mb-1">In Progress</p>
+          <h4 class="mb-0">{{ totals.in_progress }}</h4>
         </div>
       </div>
     </div>
@@ -78,12 +78,12 @@
                   <i class="bi bi-beaker-fill"></i>
                   <h3 class="mb-0 fw-bold">Experiment Tracker</h3>
                 </div>
-                <p class="small mb-0">Ongoing and recent directed evolution campaigns</p>
+                <p class="small mb-0">Current and recent directed evolution campaigns</p>
             </div>
             <ul class="nav nav-pills nav-fill bg-light rounded p-1 dashboard-filters" style="font-size: 0.85rem;">
                 <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'all' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='all', q=search_query, sort=sort_by, dir=sort_dir) }}">All</a></li>
-                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'ongoing' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='ongoing', q=search_query, sort=sort_by, dir=sort_dir) }}">Ongoing</a></li>
-                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'paused' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='paused', q=search_query, sort=sort_by, dir=sort_dir) }}">Paused</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'staged' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='staged', q=search_query, sort=sort_by, dir=sort_dir) }}">Staged</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'in_progress' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='in_progress', q=search_query, sort=sort_by, dir=sort_dir) }}">In Progress</a></li>
                 <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'completed' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='completed', q=search_query, sort=sort_by, dir=sort_dir) }}">Completed</a></li>
             </ul>
         </div>
@@ -99,15 +99,15 @@
                     <select id="sort" name="sort" class="form-select form-select-sm">
                         <option value="updated" {% if sort_by == 'updated' %}selected{% endif %}>Last Updated</option>
                         <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
-                        <option value="generations" {% if sort_by == 'generations' %}selected{% endif %}>Generations</option>
+                        <option value="generation" {% if sort_by == 'generation' %}selected{% endif %}>Generations</option>
                         <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
                     <label for="dir" class="form-label small text-muted mb-1">Direction</label>
                     <select id="dir" name="dir" class="form-select form-select-sm">
-                        <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Desc</option>
-                        <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Asc</option>
+                        <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Descending</option>
+                        <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Ascending</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-2 d-grid">
@@ -139,9 +139,7 @@
                         <td class="col-status">
                           {% if exp.status == 'Completed' %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle">{{ exp.status }}</span>
-                          {% elif exp.status == 'Paused' %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ exp.status }}</span>
-                          {% elif exp.status == 'Ongoing' %}
+                          {% elif exp.status == 'In Progress' %}
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ exp.status }}</span>
                           {% else %}
                             <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ exp.status }}</span>

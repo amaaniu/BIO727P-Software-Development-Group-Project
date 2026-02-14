@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Features - D-E Web Monitoring Portal{% endblock %}
+
+{% block content %}
+<section class="page-header text-center">
+  <span class="section-badge section-badge-accent">Platform Features</span>
+  <h1 class="h1 fw-bold page-title">Directed Evolution Workflow</h1>
+  <p class="h5 page-subtitle">
+    Stage experiments from a known WT protein, parse generation data with QC, and produce
+    interpretable analysis outputs for fast decision-making.
+  </p>
+</section>
+
+<section class="container mt-4">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Stage 1</span>
+    <h4 class="fw-bold">Staging: Protein Selection and Plasmid Validation</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-database-check h1 text-primary"></i></div>
+          <h5 class="fw-bold">UniProt Integration</h5>
+          <p class="card-text mb-0">
+            Enter a UniProt accession ID to fetch and store the WT amino acid sequence and
+            feature annotations for functional domains.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-file-earmark-arrow-up h1 text-primary"></i></div>
+          <h5 class="fw-bold">Plasmid FASTA Upload</h5>
+          <p class="card-text mb-0">
+            Upload the corresponding DNA plasmid sequence used as the foundation for the directed
+            evolution experiment.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-shield-check h1 text-primary"></i></div>
+          <h5 class="fw-bold">Circular DNA Validation</h5>
+          <p class="card-text mb-0">
+            Verify the WT coding sequence is present within the uploaded plasmid, including
+            circular wrap-around gene locations.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container mt-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Stage 2</span>
+    <h4 class="fw-bold">Experimental Data Parsing and QC</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-filetype-tsv h1 text-primary"></i></div>
+          <h5 class="fw-bold">TSV and JSON Support</h5>
+          <p class="card-text mb-0">
+            Ingest experimental outputs in either TSV or JSON formats without forcing one rigid input route.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-columns-gap h1 text-primary"></i></div>
+          <h5 class="fw-bold">Dynamic Schema Ingestion</h5>
+          <p class="card-text mb-0">
+            Parse essential fields while preserving additional metadata columns for downstream analysis.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-exclamation-triangle h1 text-primary"></i></div>
+          <h5 class="fw-bold">Quality Control Gate</h5>
+          <p class="card-text mb-0">
+            Identify, flag, and reject records with missing essential values such as plasmid variant index.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container mt-5 mb-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Stage 3</span>
+    <h4 class="fw-bold">Analysis and Report Generation</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-diagram-3 h1 text-primary"></i></div>
+          <h5 class="fw-bold">Sequence Processing</h5>
+          <p class="card-text mb-0">
+            Extract gene regions from assembled plasmid DNA, perform in-silico transcription/translation,
+            and classify synonymous/non-synonymous mutations versus WT.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-speedometer2 h1 text-primary"></i></div>
+          <h5 class="fw-bold">Unified Activity Score</h5>
+          <p class="card-text mb-0">
+            Rank variants with a normalized activity metric (DNA vs protein yield and controls),
+            prioritizing catalytic efficiency over simple overexpression.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-bar-chart-line h1 text-primary"></i></div>
+          <h5 class="fw-bold">Visual Reporting</h5>
+          <p class="card-text mb-0">
+            Generate top-performer tables and activity-per-generation distributions in-app
+            (or downloadable PDF where needed).
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -19,7 +19,7 @@ def home():
 def features():
     """Renders the features page."""
 
-    return 'soon rendering template features'
+    return render_template('features.html')
 
 # Creates the route for the documentation page
 @main_bp.route('/documentation')
@@ -46,7 +46,7 @@ def dashboard():
     sort_by = request.args.get('sort', 'updated').strip().lower()
     sort_dir = request.args.get('dir', 'desc').strip().lower()
 
-    if status_filter not in {'all', 'ongoing', 'paused', 'completed', 'staged'}:
+    if status_filter not in {'all', 'staged', 'in_progress', 'completed'}:
         status_filter = 'all'
     if sort_by not in {'updated', 'name', 'generation', 'status'}:
         sort_by = 'updated'
@@ -103,18 +103,20 @@ def dashboard():
         )
         .order_by(order_clause, Experiment.experiment_id.desc())
     )
-    # Executes the query and processes the results to determine the status of each experiment (Ongoing, Paused, Completed, or Staged) based on the raw status text. It also calculates totals for each status category to display summary information on the dashboard.
+    # Executes the query and normalizes statuses into Staged / In Progress / Completed.
     all_experiments = []
     for row in db.session.execute(experiments_query):
         raw_status = (row.status or '').strip().lower()
-        if raw_status in ('ongoing', 'active', 'in-progress', 'in progress'):
-            status = 'Ongoing'
-        elif raw_status in ('paused', 'hold', 'on hold'):
-            status = 'Paused'
-        elif raw_status in ('completed', 'complete', 'done'):
+        variant_total = int(row.variant_count or 0)
+        if raw_status in ('completed', 'complete', 'done'):
             status = 'Completed'
-        else:
+        elif raw_status in ('staged', 'new', 'initialized', 'initialised'):
             status = 'Staged'
+        elif raw_status in ('in-progress', 'in progress', 'active', 'ongoing', 'paused', 'hold', 'on hold'):
+            status = 'In Progress'
+        else:
+            # Fallback: if variants exist, treat as work-in-progress; otherwise staged.
+            status = 'In Progress' if variant_total > 0 else 'Staged'
             
     # Appends a dictionary containing experiment details to the all_experiments list, which will be passed to the dashboard template for rendering. Each dictionary includes the experiment ID, name, UniProt ID, status, maximum generation number, variant count, and last updated timestamp.
         all_experiments.append({
@@ -123,14 +125,14 @@ def dashboard():
             'uniprot_id': row.uniprot_id,
             'status': status,
             'max_generation': int(row.max_generation or 0),
-            'variant_count': int(row.variant_count or 0),
+            'variant_count': variant_total,
             'last_updated': row.last_variant_at or row.created_at,
         })
 
     totals = {
         'all': len(all_experiments),
-        'ongoing': sum(1 for exp in all_experiments if exp['status'] == 'Ongoing'),
-        'paused': sum(1 for exp in all_experiments if exp['status'] == 'Paused'),
+        'staged': sum(1 for exp in all_experiments if exp['status'] == 'Staged'),
+        'in_progress': sum(1 for exp in all_experiments if exp['status'] == 'In Progress'),
         'completed': sum(1 for exp in all_experiments if exp['status'] == 'Completed'),
     }
 
