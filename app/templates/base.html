@@ -26,17 +26,27 @@
 
       <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
         <ul class="navbar-nav mb-2 mb-lg-0">
-          <!-- Will add auth changes later--> 
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
-          </li>
-          <!-- Will add auth changes later-->
+          {% if current_user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.dashboard', username=current_user.username) }}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+              <span class="nav-link disabled" aria-disabled="true">{{ current_user.username }}</span>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+            </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('main.features') }}">Features</a>
           </li>

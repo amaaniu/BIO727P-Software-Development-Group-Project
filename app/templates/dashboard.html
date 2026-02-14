@@ -28,9 +28,6 @@
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('main.dashboard', username=current_user.username) }}">Dashboard</a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
-            </li>
           {% else %}
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
@@ -51,6 +48,14 @@
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('main.casestudy_tutorial') }}">Case Study/Tutorial</a>
           </li>
+          {% if current_user.is_authenticated %}
+          <li class="nav-item">
+            <span class="nav-link disabled" aria-disabled="true">{{ current_user.username }}</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+          </li>
+          {% endif %}
         </ul>
       </div>
     </div>
