@@ -35,6 +35,13 @@ def tutorial():
 
     return 'soon rendering template tutorial'
 
+# Creates the route for the staging page, which is only accessible to authenticated users.
+@main_bp.route('/upload')
+@login_required
+def upload_data():
+    """Route for uploading experimental data."""
+    return render_template('upload.html')
+
 # Creates the route for the dashboard page, which is only accessible to authenticated users. 
 # The dashboard route retrieves and processes experiment data for the logged-in user, allowing them to view and manage their directed evolution campaigns. It supports filtering, searching, and sorting of experiments based on various criteria such as status, name, generation count, and last updated time. The processed data is then passed to the dashboard template for rendering.
 @main_bp.route('/dashboard')
@@ -166,8 +173,3 @@ def view_report(experiment_id):
         abort(404)
     return f"Report view coming soon for experiment: {experiment.experiment_name}"
 
-@main_bp.route('/upload')
-@login_required
-def upload_data():
-    """Route for uploading experimental data."""
-    return render_template('upload.html')
