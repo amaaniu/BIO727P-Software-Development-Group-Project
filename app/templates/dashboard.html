@@ -125,11 +125,25 @@
                     <tr>
                         <td class="ps-4 col-exp">{{ exp.experiment_name }}</td>
                         <td class="col-id"><code class="text-primary fw-bold">{{ exp.uniprot_id }}</code></td>
-                        <td class="d-none d-md-table-cell">{{ exp.variant_count }}</td>
-                        <td><span class="badge rounded-pill bg-info text-dark">{{ exp.max_generation }}</span></td>
+                        <td class="d-none d-md-table-cell">
+                          {% if exp.variant_count and exp.variant_count > 0 %}
+                            {{ exp.variant_count }}
+                          {% else %}
+                            <span class="text-muted">No data uploaded</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if exp.variant_count and exp.variant_count > 0 %}
+                            <span class="badge rounded-pill bg-info text-dark">{{ exp.max_generation }}</span>
+                          {% else %}
+                            <span class="text-muted">No data uploaded</span>
+                          {% endif %}
+                        </td>
                         <td class="col-status">
                           {% if exp.status == 'Completed' %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle">{{ exp.status }}</span>
+                          {% elif not exp.variant_count or exp.variant_count == 0 %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Awaiting Data</span>
                           {% elif exp.status == 'In Progress' %}
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ exp.status }}</span>
                           {% else %}
@@ -138,7 +152,11 @@
                         </td>
                         <td class="text-muted small d-none d-lg-table-cell">{{ exp.last_updated.strftime('%Y-%m-%d') if exp.last_updated else 'N/A' }}</td>
                         <td class="text-end pe-4">
-                          <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">View Report</a>
+                          {% if exp.experiment_id is defined and exp.experiment_id %}
+                            <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">View Report</a>
+                          {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled>View Report</button>
+                          {% endif %}
                         </td>
                     </tr>
                   {% endfor %}
