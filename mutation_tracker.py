@@ -71,12 +71,10 @@ def classify_mutations_cds(
             "generation": generation,
             "codon_change": f"{wt_codon}->{var_codon}"
         })
-
+        
     return {
-
         "mutation_records": mutation_records,
         "syn_count": syn_count,
         "nonsyn_count": nonsyn_count,
-        "stop_gained": stop_gained,
-        "stop_lost": stop_lost
+        "mutation_count": len(mutation_records)
     }
