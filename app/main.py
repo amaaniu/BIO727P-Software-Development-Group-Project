@@ -47,20 +47,26 @@ def upload_data():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Renders the dashboard page, after user is authenticated."""
+    """
+    Renders the dashboard page for the authenticated user, displaying their
+    directed evolution analyses with support for filtering, sorting, and searching.
+    """
+
+    # 1. Parse and validate request parameters for filtering/sorting
     status_filter = request.args.get('status', 'all').strip().lower()
     search_query = request.args.get('q', '').strip()
     sort_by = request.args.get('sort', 'updated').strip().lower()
     sort_dir = request.args.get('dir', 'desc').strip().lower()
 
-    if status_filter not in {'all', 'staged', 'in_progress', 'completed'}:
+    if status_filter not in {'all', 'in_progress', 'completed'}:
         status_filter = 'all'
     if sort_by not in {'updated', 'name', 'generation', 'status'}:
         sort_by = 'updated'
     if sort_dir not in {'asc', 'desc'}:
         sort_dir = 'desc'
 
-    # 
+    # 2. Define expressions for sorting and aggregation using SQLAlchemy functions. 
+    # The max_variant_created expression calculates the latest creation timestamp among variants for each experiment, while max_generation computes the highest generation number. The variant_count expression counts the total number of variants associated with each experiment. The last_updated_expr uses the COALESCE function to determine the last updated time for an experiment, defaulting to the experiment's creation time if no variants exist.
     max_variant_created = func.max(Variant.created_at) 
     max_generation = func.max(Variant.generation)
     variant_count = func.count(Variant.variant_id)
@@ -75,7 +81,7 @@ def dashboard():
     sort_expr = sort_options[sort_by]
     order_clause = sort_expr.asc() if sort_dir == 'asc' else sort_expr.desc()
 
-    # Pull per-experiment summary rows for the logged-in user.
+    # 3. Constructs a SQLAlchemy query to retrieve experiments for the current user.
     experiments_query = (
         db.select(
             Experiment.experiment_id,
@@ -99,8 +105,8 @@ def dashboard():
                 func.lower(Experiment.uniprot_id).like(pattern),
             )
         )
-    # Groups results by experiment and applies sorting based on user selection. The sorting can be done by last updated time, experiment name, number of generations, or status, in either ascending or descending order. 
-    experiments_query = (
+    # 4. Groups the query results by experiment attributes and sorts them in the specified order. experiments_query = (
+        experiments_query = (
         experiments_query.group_by(
             Experiment.experiment_id,
             Experiment.experiment_name,
@@ -110,22 +116,20 @@ def dashboard():
         )
         .order_by(order_clause, Experiment.experiment_id.desc())
     )
-    # Executes the query and normalizes statuses into Staged / In Progress / Completed.
+    # 5. Executes the query and processes the results to determine the status of each experiment based on its raw status and variant count. 
     all_experiments = []
     for row in db.session.execute(experiments_query):
         raw_status = (row.status or '').strip().lower()
         variant_total = int(row.variant_count or 0)
         if raw_status in ('completed', 'complete', 'done'):
             status = 'Completed'
-        elif raw_status in ('staged', 'new', 'initialized', 'initialised'):
-            status = 'Staged'
         elif raw_status in ('in-progress', 'in progress', 'active', 'ongoing', 'paused', 'hold', 'on hold'):
             status = 'In Progress'
         else:
             # Fallback: if variants exist, treat as work-in-progress; otherwise staged.
             status = 'In Progress' if variant_total > 0 else 'Staged'
             
-    # Appends a dictionary containing experiment details to the all_experiments list, which will be passed to the dashboard template for rendering. Each dictionary includes the experiment ID, name, UniProt ID, status, maximum generation number, variant count, and last updated timestamp.
+        # Structure the experiment data for rendering in the dashboard template, including the experiment ID, name, UniProt ID, determined status, maximum generation number, total variant count, and last updated timestamp.
         all_experiments.append({
             'experiment_id': row.experiment_id,
             'experiment_name': row.experiment_name,
@@ -138,11 +142,11 @@ def dashboard():
 
     totals = {
         'all': len(all_experiments),
-        'staged': sum(1 for exp in all_experiments if exp['status'] == 'Staged'),
         'in_progress': sum(1 for exp in all_experiments if exp['status'] == 'In Progress'),
         'completed': sum(1 for exp in all_experiments if exp['status'] == 'Completed'),
     }
 
+    # 7. Applies the selected status filter to the list of experiments, allowing the user to view only experiments that match the chosen status category (e.g., all, staged, in-progress, completed). The filtered list of experiments is then passed to the dashboard template for rendering, along with the summary totals and current filter/sort settings for display on the dashboard page.
     if status_filter == 'all':
         experiments = all_experiments
     else:
@@ -173,3 +177,7 @@ def view_report(experiment_id):
         abort(404)
     return f"Report view coming soon for experiment: {experiment.experiment_name}"
 
+@main_bp.route('/experiments/new')
+@login_required
+def new_experiment():
+    return render_template('experiments_new.html')
