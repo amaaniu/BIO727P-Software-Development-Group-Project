@@ -1,18 +1,20 @@
-from flask import Blueprint, render_template, request, jsonify, session
-from staging import fetch_uniprot, parse_fasta, match_wt_exact
-from orf_translation import six_frame_orfs
-from file_handling import process_file
-from db_operations import ensure_guest_user, process_and_insert, insert_uniprot_records, insert_uniprot_feature_records, update_experiment_plasmid
 from datetime import datetime
-from models import UniProtFeature, db, Experiment, UniProtData
 
-routes_bp = Blueprint("routes", __name__)
+from flask import Blueprint, jsonify, render_template, request, session
 
-@routes_bp.route("/", methods=["GET"])
+from app.models import Experiment, UniProtData, UniProtFeature, User, db
+from app.uploads.db_operations import process_and_insert, update_experiment_plasmid
+from app.uploads.file_handling import process_file
+from app.uploads.orf_translation import six_frame_orfs
+from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta
+
+upload_bp = Blueprint("upload", __name__)
+
+@upload_bp.route("/", methods=["GET"])
 def staging_page():
     return render_template("staging.html")
 
-@routes_bp.route("/api/uniprot", methods=["POST"])
+@upload_bp.route("/api/uniprot", methods=["POST"])
 def api_uniprot():
     user_id = session.get("user_id", 1)  # guest fallback
 
@@ -23,20 +25,34 @@ def api_uniprot():
         if not accession:
             return jsonify({"ok": False, "error": "Please enter a UniProt accession."}), 400
 
+        # 0) Ensure the user exists (FK: Experiment.user_id -> User.user_id)
+        u = User.query.get(user_id)
+        if not u:
+            u = User(
+                user_id=user_id,
+                email="guest@example.com",
+                password_hash="guest",
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(u)
+            db.session.commit()
+
+        # 1) Fetch UniProt
         data = fetch_uniprot(accession)
 
+        # 2) Ensure UniProtData exists (FK: Experiment.uniprot_id -> UniProt_Data.uniprot_id)
         existing = UniProtData.query.get(data["uniprot_id"])
         if not existing:
             uniprot = UniProtData(
-            uniprot_id=data["uniprot_id"],
-            protein_name=data.get("protein_name"),
-            protein_length=data["protein_length"],
-            protein_sequence=data["protein_sequence"],)
-        
-        db.session.add(uniprot)
-        db.session.commit()
+                uniprot_id=data["uniprot_id"],
+                protein_name=data.get("protein_name"),
+                protein_length=data["protein_length"],
+                protein_sequence=data["protein_sequence"],
+            )
+            db.session.add(uniprot)
+            db.session.commit()
 
-
+        # 3) Store features (and commit them)
         for f in data.get("features", []):
             db.session.add(UniProtFeature(
                 uniprot_id=data["uniprot_id"],
@@ -45,14 +61,16 @@ def api_uniprot():
                 start_pos=f.get("start_pos"),
                 end_pos=f.get("end_pos"),
             ))
+        db.session.commit()
 
+        # 4) Create experiment
         exp_name = (payload.get("experiment_name") or "Untitled experiment").strip()
 
         experiment = Experiment(
             user_id=user_id,
             experiment_name=exp_name,
             uniprot_id=data["uniprot_id"],
-            wt_protein_sequence=data["protein_sequence"],  # store WT in Experiment for validation step
+            wt_protein_sequence=data["protein_sequence"],
             status="uniprot_loaded",
             created_at=datetime.utcnow(),
         )
@@ -64,19 +82,20 @@ def api_uniprot():
             "ok": True,
             "experiment_id": experiment.experiment_id,
             "wt": {
-                "accession": data["uniprot_id"],              
-                "protein_name": data["protein_name"],
-                "sequence": data["protein_sequence"],         
-                "sequence_length": data["protein_length"],     
+                "accession": data["uniprot_id"],
+                "protein_name": data.get("protein_name"),
+                "sequence": data["protein_sequence"],
+                "sequence_length": data["protein_length"],
                 "features": data.get("features", []),
             }
         })
 
     except Exception as e:
+        db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 400
 
 
-@routes_bp.route("/api/validate-fasta", methods=["POST"])
+@upload_bp.route("/api/validate-fasta", methods=["POST"])
 def api_validate_fasta():
     try:
         if "fastaFile" not in request.files:
@@ -122,7 +141,7 @@ def api_validate_fasta():
         return jsonify({"ok": False, "error": str(e)}), 400
 
 
-@routes_bp.route("/api/upload-data", methods=["POST"])
+@upload_bp.route("/api/upload-data", methods=["POST"])
 def api_upload_data():
     user_id = session.get("user_id", 1)  # TEMP: avoid session KeyError
 
