@@ -180,4 +180,4 @@ def view_report(experiment_id):
 @main_bp.route('/experiments/new')
 @login_required
 def new_experiment():
-    return render_template('experiments_new.html')
+    return render_template('staging.html')
