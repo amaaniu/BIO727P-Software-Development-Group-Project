@@ -29,10 +29,12 @@ def create_app():
         return db.session.get(User, int(user_id))  # Retrieves the user from the database using SQLAlchemy's session.get method
     
     from .main import main_bp 
-    from .auth import auth_bp   
+    from .auth import auth_bp
+    from .uploads import uploads_bp 
 
     app.register_blueprint(main_bp)  # Register the main blueprint with a URL prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes
+    app.register_blueprint(uploads_bp, url_prefix='/uploads')  # Register the uploads blueprint with a URL prefix for upload routes
     #app.register_blueprint(other_blueprint)  # Register other blueprints as needed
     
     with app.app_context():
