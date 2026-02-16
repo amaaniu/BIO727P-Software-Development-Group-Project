@@ -19,7 +19,7 @@ class Experiment(db.Model):
     experiment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('User.user_id'), nullable=False)
     experiment_name = db.Column(db.Text, nullable=False)
-    uniprot_id = db.Column(db.Text, nullable=False)
+    uniprot_id = db.Column(db.Text, db.ForeignKey('UniProt_Data.uniprot_id'), nullable=False)
     wt_protein_sequence = db.Column(db.Text)
     protein_features = db.Column(db.Text)
     plasmid_sequence = db.Column(db.Text)
@@ -78,3 +78,29 @@ class ControlData(db.Model):
     control_type = db.Column(db.Text, nullable=False)  # ✓ FIXED from 'control_name'
     protein_yield = db.Column(db.Float, nullable=False)
     dna_yield = db.Column(db.Float, nullable=False)
+
+class UniProtData(db.Model):
+    __tablename__ = 'UniProt_Data'
+
+    uniprot_id = db.Column(db.Text, primary_key=True)
+    protein_name = db.Column(db.Text)
+    protein_length = db.Column(db.Integer, nullable=False)
+    protein_sequence = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    experiments = db.relationship('Experiment', backref='uniprot', lazy='dynamic')
+    features = db.relationship('UniProtFeature', backref='uniprot_entry', lazy='dynamic')
+
+
+class UniProtFeature(db.Model):
+    __tablename__ = 'UniProt_Feature'
+
+    feature_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uniprot_id = db.Column(db.Text, db.ForeignKey('UniProt_Data.uniprot_id'), nullable=False)
+
+    feature_type = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text)
+    start_pos = db.Column(db.Integer)
+    end_pos = db.Column(db.Integer)
+    

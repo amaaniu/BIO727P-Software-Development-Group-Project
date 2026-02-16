@@ -35,6 +35,79 @@ def insert_experiment_records(records, user_id):
     db.session.commit()
     return experiment_objects
 
+def insert_uniprot_records(records):
+    """
+    Insert UniProt records into database.
+
+    Args:
+        records: Dict containing UniProt data
+
+    Returns:
+        Created UniProtData object
+    """
+    uniprot = UniProtData(
+        uniprot_id=records['uniprot_id'],
+        protein_name=records.get('protein_name'),
+        protein_length=records['protein_length'],
+        protein_sequence=records['protein_sequence']
+    )
+
+    db.session.add(uniprot)
+    db.session.commit()
+
+    return uniprot
+
+def insert_uniprot_feature_records(records, uniprot_id):
+    """
+    Insert UniProt feature records into database.
+
+    Args:
+        records: List of feature dicts
+        uniprot_id: UniProt accession ID
+
+    Returns:
+        List of created UniProtFeature objects
+    """
+    feature_objects = []
+
+    for record in records:
+        feature = UniProtFeature(
+            uniprot_id=uniprot_id,
+            feature_type=record['feature_type'],
+            description=record.get('description'),
+            start_pos=record.get('start_pos'),
+            end_pos=record.get('end_pos')
+        )
+
+        db.session.add(feature)
+        feature_objects.append(feature)
+
+    db.session.commit()
+    return feature_objects
+
+def update_experiment_plasmid(experiment_id, plasmid_sequence, status=None):
+    """
+    Update plasmid sequence for an experiment.
+
+    Args:
+        experiment_id: Experiment ID
+        plasmid_sequence: DNA sequence string
+
+    Returns:
+        Updated Experiment object
+    """
+    experiment = Experiment.query.get(experiment_id)
+
+    if not experiment:
+        raise ValueError("Experiment not found")
+
+    experiment.plasmid_sequence = plasmid_sequence
+
+    if status:
+        experiment.status = status
+
+    db.session.commit()
+    return experiment
 
 def insert_variant_records(records, experiment_id):
     """
@@ -62,7 +135,7 @@ def insert_variant_records(records, experiment_id):
             activity_score=record.get('activity_score'),
             mutation_count=record.get('mutation_count'),
             created_at=datetime.utcnow(),
-            metadata=None  
+            meta_d=None  
         )
         
         db.session.add(variant)

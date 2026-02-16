@@ -1,13 +1,5 @@
-from __future__ import annotations
-
-from flask import Flask, render_template, request, jsonify, redirect, url_for
-
 import requests
-
-# Flask setup- for testing purposes only, will be removed when integrated with final_page/app.py
-# =========================
-app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB upload limit
+from orf_translation import six_frame_orfs, pick_longest_orf
 
 def fetch_uniprot(accession):
     """Fetch UniProt data for a given accession number. Returns a dict with keys"""
@@ -51,19 +43,19 @@ def fetch_uniprot(accession):
 
         if ftype and start and end:
             features.append({
-                "type": ftype,
+                "feature_type": ftype,
                 "description": desc or "",
-                "start": start,
-                "end": end
+                "start_pos": start,
+                "end_pos": end
             })
 
     return {
-        "accession": accession,
+        "uniprot_id": accession,
         "protein_name": protein_name,
-        "sequence": sequence,
-        "sequence_length": len(sequence),
+        "protein_sequence": sequence,
+        "protein_length": len(sequence),
         "features": features
-    }
+    }   
     
 # FASTA parsing + DNA validation
 class FastaError(ValueError):
