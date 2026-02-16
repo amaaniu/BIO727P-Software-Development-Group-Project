@@ -8,13 +8,13 @@ from app.uploads.file_handling import process_file
 from app.uploads.orf_translation import six_frame_orfs
 from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta
 
-routes_bp = Blueprint("routes", __name__)
+upload_bp = Blueprint("upload", __name__)
 
-@routes_bp.route("/", methods=["GET"])
+@upload_bp.route("/", methods=["GET"])
 def staging_page():
     return render_template("staging.html")
 
-@routes_bp.route("/api/uniprot", methods=["POST"])
+@upload_bp.route("/api/uniprot", methods=["POST"])
 def api_uniprot():
     user_id = session.get("user_id", 1)  # guest fallback
 
@@ -95,7 +95,7 @@ def api_uniprot():
         return jsonify({"ok": False, "error": str(e)}), 400
 
 
-@routes_bp.route("/api/validate-fasta", methods=["POST"])
+@upload_bp.route("/api/validate-fasta", methods=["POST"])
 def api_validate_fasta():
     try:
         if "fastaFile" not in request.files:
@@ -141,7 +141,7 @@ def api_validate_fasta():
         return jsonify({"ok": False, "error": str(e)}), 400
 
 
-@routes_bp.route("/api/upload-data", methods=["POST"])
+@upload_bp.route("/api/upload-data", methods=["POST"])
 def api_upload_data():
     user_id = session.get("user_id", 1)  # TEMP: avoid session KeyError
 
