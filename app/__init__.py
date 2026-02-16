@@ -34,7 +34,7 @@ def create_app():
 
     app.register_blueprint(main_bp)  # Register the main blueprint with a URL prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes
-    app.register_blueprint(upload_bp, url_prefix='/uploads')  # Register the uploads blueprint with a URL prefix for upload routes
+    app.register_blueprint(upload_bp, url_prefix='/upload')  # Register the uploads blueprint with a URL prefix for upload routes
     #app.register_blueprint(other_blueprint)  # Register other blueprints as needed
     
     with app.app_context():
