@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Features - D-E Web Monitoring Portal{% endblock %}
+
+{% block content %}
+<section class="page-header text-center">
+  <span class="section-badge section-badge-accent">Platform Features</span>
+  <h1 class="h1 fw-bold page-title">Directed Evolution Analytics Platform</h1>
+  <p class="h5 page-subtitle">
+    A single workspace to validate constructs, process experimental runs, and surface
+    insights into the data.
+  </p>
+</section>
+
+<section class="container mt-4">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Core Capabilities</span>
+    <h4 class="fw-bold">Stage Your Protein</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-database-check h1 text-primary"></i></div>
+          <h5 class="fw-bold">Protein Context Ready</h5>
+          <p class="card-text mb-0">
+            Pull wild-type sequence and domain annotations from UniProt to anchor every
+            experiment to a trusted biological reference.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-file-earmark-arrow-up h1 text-primary"></i></div>
+          <h5 class="fw-bold">Plasmid-Ready Input</h5>
+          <p class="card-text mb-0">
+            Accept plasmid FASTA uploads as the canonical DNA source for each campaign.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card action-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-shield-check h1 text-primary"></i></div>
+          <h5 class="fw-bold">Plasmid Construct Validation</h5>
+          <p class="card-text mb-0">
+            Confirm the wild-type polymerase encoding inside circular plasmids.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container mt-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Data Handling</span>
+    <h4 class="fw-bold">Reliable Data Ingestion</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-filetype-tsv h1 text-primary"></i></div>
+          <h5 class="fw-bold">Flexible File Support</h5>
+          <p class="card-text mb-0">
+            Import experimental runs from TSV or JSON files.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-columns-gap h1 text-primary"></i></div>
+          <h5 class="fw-bold">Flexible Schema Handling</h5>
+          <p class="card-text mb-0">
+            Preserve required fields and capture extra metadata columns for richer downstream analysis.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-exclamation-triangle h1 text-primary"></i></div>
+          <h5 class="fw-bold">Built-In QC Protection</h5>
+          <p class="card-text mb-0">
+            Automatically flags and reject records missing essential identifiers before analysis.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container mt-5 mb-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Insights</span>
+    <h4 class="fw-bold">Analysis and Reporting</h4>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-diagram-3 h1 text-primary"></i></div>
+          <h5 class="fw-bold">Mutation Tracking</h5>
+          <p class="card-text mb-0">
+            Translate variant DNA to protein space and classify mutation type relative to WT.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-speedometer2 h1 text-primary"></i></div>
+          <h5 class="fw-bold">Activity Scoring Engine</h5>
+          <p class="card-text mb-0">
+            Rank variants with a standardised metric that accounts for both activity and expression.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card data-card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="feature-icon"><i class="bi bi-bar-chart-line h1 text-primary"></i></div>
+          <h5 class="fw-bold">Decision-Ready Reporting</h5>
+          <p class="card-text mb-0">
+            Generate reports of top performers, generational trends, and export the output for review.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
