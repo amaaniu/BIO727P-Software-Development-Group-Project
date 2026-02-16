@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from io import BytesIO
 from werkzeug.utils import secure_filename
+from thefuzz import fuzz, process
 
 ALLOWED_EXTENSIONS = {'.tsv', '.json'}
 
@@ -126,7 +127,7 @@ COLUMN_NAME_MAP = {
 }
 
 
-def normalize_columns(df):
+def normalize_columns(df, fuzzy_threshold=85):
     """
     Normalize DataFrame column names to canonical database field names.
 
@@ -134,9 +135,11 @@ def normalize_columns(df):
         1. Strip whitespace and lowercase all column names
         2. Replace spaces with underscores
         3. Map known aliases to canonical names via COLUMN_NAME_MAP
+        4. For unmatched columns, attempt fuzzy matching against known aliases
 
     Args:
         df: pandas DataFrame with raw column names
+        fuzzy_threshold: minimum score (0-100) for a fuzzy match to be accepted
 
     Returns:
         DataFrame with normalized column names
@@ -144,9 +147,22 @@ def normalize_columns(df):
     # Lowercase, strip whitespace, replace spaces with underscores
     df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
 
-    # Apply alias mapping (unmapped columns stay as-is)
-    df.columns = [COLUMN_NAME_MAP.get(col, col) for col in df.columns]
+    alias_keys = list(COLUMN_NAME_MAP.keys())
+    new_columns = []
 
+    for col in df.columns:
+        # Exact match first
+        if col in COLUMN_NAME_MAP:
+            new_columns.append(COLUMN_NAME_MAP[col])
+        else:
+            # Fuzzy match fallback
+            result = process.extractOne(col, alias_keys, scorer=fuzz.token_sort_ratio)
+            if result and result[1] >= fuzzy_threshold:
+                new_columns.append(COLUMN_NAME_MAP[result[0]])
+            else:
+                new_columns.append(col)
+
+    df.columns = new_columns
     return df
 
 
@@ -197,7 +213,15 @@ def parse_tsv(file_content):
     Returns:
         pandas DataFrame
     """
-    return pd.read_csv(BytesIO(file_content), sep='\t')
+    if not file_content or not file_content.strip():
+        raise ValueError("File is empty. Please upload a TSV file with data.")
+    try:
+        df = pd.read_csv(BytesIO(file_content), sep='\t')
+    except Exception as e:
+        raise ValueError(f"Failed to parse TSV file: {e}. Ensure the file is a valid tab-separated format.")
+    if df.empty:
+        raise ValueError("TSV file contains headers but no data rows.")
+    return df
 
 
 def parse_json(file_content):
@@ -210,7 +234,15 @@ def parse_json(file_content):
     Returns:
         pandas DataFrame
     """
-    return pd.read_json(BytesIO(file_content))
+    if not file_content or not file_content.strip():
+        raise ValueError("File is empty. Please upload a JSON file with data.")
+    try:
+        df = pd.read_json(BytesIO(file_content))
+    except Exception as e:
+        raise ValueError(f"Failed to parse JSON file: {e}. Ensure the file contains valid JSON.")
+    if df.empty:
+        raise ValueError("JSON file was parsed but contains no data records.")
+    return df
 
 
 def detect_data_type(df):
@@ -227,7 +259,7 @@ def detect_data_type(df):
         ValueError: If data type cannot be determined
     """
     if df.empty:
-        raise ValueError("Empty data provided")
+        raise ValueError("The file contains no data rows.")
 
     columns = set(df.columns)
 
@@ -242,7 +274,15 @@ def detect_data_type(df):
     elif CONTROL_REQUIRED.issubset(columns):
         return 'control'
     else:
-        raise ValueError(f"Cannot determine data type from columns: {columns}")
+        raise ValueError(
+            f"Cannot determine data type from columns: {columns}. "
+            f"Your file must contain one of the following sets of required columns: "
+            f"Experiment: {EXPERIMENT_REQUIRED}, "
+            f"Variant: {VARIANT_REQUIRED}, "
+            f"Mutation: {MUTATION_REQUIRED}, "
+            f"Activity: {ACTIVITY_REQUIRED}, "
+            f"Control: {CONTROL_REQUIRED}."
+        )
 
 
 def process_experiment_data(df):
@@ -257,12 +297,20 @@ def process_experiment_data(df):
     """
     missing = EXPERIMENT_REQUIRED - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required fields: {missing}")
+        raise ValueError(f"Missing required experiment columns: {missing}. "
+                         f"Required columns are: {EXPERIMENT_REQUIRED}")
 
     # Select only relevant columns, add missing optional columns as NaN
     for field in EXPERIMENT_FIELDS:
         if field not in df.columns:
             df[field] = None
+
+    # Check for null values in required fields
+    for field in EXPERIMENT_REQUIRED:
+        null_rows = df[df[field].isna() | (df[field].astype(str).str.strip() == '')]
+        if not null_rows.empty:
+            row_nums = [str(i + 2) for i in null_rows.index[:5]]
+            raise ValueError(f"Required field '{field}' has empty values in row(s): {', '.join(row_nums)}.")
 
     df = df[EXPERIMENT_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -280,11 +328,19 @@ def process_variant_data(df):
     """
     missing = VARIANT_REQUIRED - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required fields: {missing}")
+        raise ValueError(f"Missing required variant columns: {missing}. "
+                         f"Required columns are: {VARIANT_REQUIRED}")
 
     for field in VARIANT_FIELDS:
         if field not in df.columns:
             df[field] = None
+
+    # Check for null values in required fields
+    for field in VARIANT_REQUIRED:
+        null_rows = df[df[field].isna() | (df[field].astype(str).str.strip() == '')]
+        if not null_rows.empty:
+            row_nums = [str(i + 2) for i in null_rows.index[:5]]
+            raise ValueError(f"Required field '{field}' has empty values in row(s): {', '.join(row_nums)}.")
 
     # Convert numeric fields
     numeric_int = ['generation', 'mutation_count']
@@ -292,11 +348,21 @@ def process_variant_data(df):
 
     for col in numeric_int:
         if col in df.columns:
+            original_non_null = df[col].dropna()
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+            failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+            if not failed.empty:
+                bad_vals = failed.head(3).tolist()
+                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
 
     for col in numeric_float:
         if col in df.columns:
+            original_non_null = df[col].dropna()
             df[col] = pd.to_numeric(df[col], errors='coerce')
+            failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+            if not failed.empty:
+                bad_vals = failed.head(3).tolist()
+                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected numeric values.")
 
     df = df[VARIANT_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -314,17 +380,30 @@ def process_mutation_data(df):
     """
     missing = MUTATION_REQUIRED - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required fields: {missing}")
+        raise ValueError(f"Missing required mutation columns: {missing}. "
+                         f"Required columns are: {MUTATION_REQUIRED}")
 
     for field in MUTATION_FIELDS:
         if field not in df.columns:
             df[field] = None
 
+    # Check for null values in required fields
+    for field in MUTATION_REQUIRED:
+        null_rows = df[df[field].isna() | (df[field].astype(str).str.strip() == '')]
+        if not null_rows.empty:
+            row_nums = [str(i + 2) for i in null_rows.index[:5]]
+            raise ValueError(f"Required field '{field}' has empty values in row(s): {', '.join(row_nums)}.")
+
     # Convert numeric fields
     numeric_int = ['position', 'generation']
     for col in numeric_int:
         if col in df.columns:
+            original_non_null = df[col].dropna()
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+            failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+            if not failed.empty:
+                bad_vals = failed.head(3).tolist()
+                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
 
     df = df[MUTATION_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -342,15 +421,28 @@ def process_activity_data(df):
     """
     missing = ACTIVITY_REQUIRED - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required fields: {missing}")
+        raise ValueError(f"Missing required activity columns: {missing}. "
+                         f"Required columns are: {ACTIVITY_REQUIRED}")
 
     for field in ACTIVITY_FIELDS:
         if field not in df.columns:
             df[field] = None
 
+    # Check for null values in required fields
+    for field in ACTIVITY_REQUIRED:
+        null_rows = df[df[field].isna() | (df[field].astype(str).str.strip() == '')]
+        if not null_rows.empty:
+            row_nums = [str(i + 2) for i in null_rows.index[:5]]
+            raise ValueError(f"Required field '{field}' has empty values in row(s): {', '.join(row_nums)}.")
+
     # Convert numeric fields
     if 'raw_value' in df.columns:
+        original_non_null = df['raw_value'].dropna()
         df['raw_value'] = pd.to_numeric(df['raw_value'], errors='coerce')
+        failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+        if not failed.empty:
+            bad_vals = failed.head(3).tolist()
+            raise ValueError(f"Column 'raw_value' contains non-numeric values: {bad_vals}. Expected numeric values.")
 
     df = df[ACTIVITY_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -368,11 +460,19 @@ def process_control_data(df):
     """
     missing = CONTROL_REQUIRED - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required fields: {missing}")
+        raise ValueError(f"Missing required control columns: {missing}. "
+                         f"Required columns are: {CONTROL_REQUIRED}")
 
     for field in CONTROL_FIELDS:
         if field not in df.columns:
             df[field] = None
+
+    # Check for null values in required fields
+    for field in CONTROL_REQUIRED:
+        null_rows = df[df[field].isna() | (df[field].astype(str).str.strip() == '')]
+        if not null_rows.empty:
+            row_nums = [str(i + 2) for i in null_rows.index[:5]]
+            raise ValueError(f"Required field '{field}' has empty values in row(s): {', '.join(row_nums)}.")
 
     # Convert numeric fields
     numeric_int = ['generation']
@@ -380,11 +480,21 @@ def process_control_data(df):
 
     for col in numeric_int:
         if col in df.columns:
+            original_non_null = df[col].dropna()
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+            failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+            if not failed.empty:
+                bad_vals = failed.head(3).tolist()
+                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
 
     for col in numeric_float:
         if col in df.columns:
+            original_non_null = df[col].dropna()
             df[col] = pd.to_numeric(df[col], errors='coerce')
+            failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
+            if not failed.empty:
+                bad_vals = failed.head(3).tolist()
+                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected numeric values.")
 
     df = df[CONTROL_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -409,9 +519,22 @@ def process_file(file):
         ValueError: If file format is invalid, data type cannot be determined,
                    or required fields are missing
     """
+    if not file or not file.filename:
+        raise ValueError("No file provided. Please select a file to upload.")
+
     filename = secure_filename(file.filename)
+    if not filename:
+        raise ValueError("Invalid filename. The filename contains no valid characters.")
+
     extension = validate_file_extension(filename)
-    file_content = file.read()
+
+    try:
+        file_content = file.read()
+    except Exception as e:
+        raise ValueError(f"Failed to read file: {e}")
+
+    if not file_content:
+        raise ValueError("The uploaded file is empty.")
 
     # Parse based on extension
     if extension == '.tsv':
