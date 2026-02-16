@@ -238,7 +238,7 @@
           </div>
         </div> `;
 
-      // Feature table
+            // Feature table
       const feats = wt.features || [];
       featureTableBody.innerHTML = "";
 
@@ -249,9 +249,9 @@
         featureTableBody.innerHTML = `<tr><td colspan="4" class="text-muted">No features returned.</td></tr>`;
       } else {
         for (const f of show) {
-          const type = f.type || "";
-          const start = f.start ?? "";
-          const end = f.end ?? "";
+          const type = f.feature_type || "";
+          const start = f.start_pos ?? "";
+          const end = f.end_pos ?? "";
           const desc = f.description || "";
 
           featureTableBody.innerHTML += `
@@ -264,6 +264,8 @@
           `;
         }
       }
+
+      featureCount.textContent = feats.length > maxRows
 
       featureCount.textContent = feats.length > maxRows
         ? `Showing ${maxRows} of ${feats.length} features.`
