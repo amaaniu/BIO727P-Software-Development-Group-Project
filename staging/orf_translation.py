@@ -40,7 +40,8 @@ STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
 class SequenceError(ValueError):
-    """Raised when sequence validation or processing fails."""
+    pass
+    # raised when sequence validation or processing fails.
 
 
 def validate_dna(seq):
@@ -63,25 +64,13 @@ def validate_dna(seq):
 
     return dna
 
-
 def reverse_complement(dna):
     """
     Return the reverse complement of a DNA sequence.
     """
-    complement = {
-        "A": "T",
-        "T": "A",
-        "C": "G",
-        "G": "C",
-        "N": "N"
-    }
-
-    reverse_sequence = ""
-
-    for base in dna.upper():
-        reverse_sequence = complement[base] + reverse_sequence
-
-    return reverse_sequence
+    complement = {"A": "T", "T": "A","C": "G","G": "C","N": "N"}
+    dna= dna.upper()
+    return "".join(comp[b] for b in reversed(dna))
 
 
 def transcribe_dna_to_rna(dna: str) -> str:
@@ -106,42 +95,58 @@ def translate_dna(dna):
             amino_acid_seq.append("X")
     return "".join(amino_acid_seq)
 
+def _orf_endpoints_in_seq(dna, frame):
+    """
+    Returns ORF endpoints (start_bp, end_bp_exclusive) for ORFs in a single frame.
+    ORF defined as ATG ... STOP (stop excluded).
+    """
+    out = []
+    i = frame
+    while i <= len(seq) - 3:
+        if dna[i:i+3] == "ATG":
+            j = i
+            while j <= len(seq) - 3:
+                codon = seq[j:j+3]
+                if codon in STOP_CODONS:
+                    out.append((i, j))  # stop excluded
+                    break
+                j += 3
+            # continue scanning after this start (keeps your original behaviour)
+        i += 3
+    return out
 
 # ORF finding
-def find_orfs_in_frame(dna, frame, min_aa=30):
+def find_orfs_in_frame(dna, frame, min_aa, max_bp=None):
     """
     Find ORFs in ONE reading frame on a DNA string.
     """
     dna = dna.upper()
     orfs = []
-
-    i = frame
-    while i <= len(dna) - 3:
-
-        if dna[i:i+3] == "ATG":
-
-            for j in range(i, len(dna) - 2, 3):
-                codon = dna[j:j+3]
-
-                if codon in STOP_CODONS:
-                    orf_dna = dna[i:j]  # exclude stop codon
-                    protein = translate_dna(orf_dna)
-
-                    if len(protein) >= min_aa:
-                        orfs.append({
-                            "frame": frame,
-                            "start_bp": i,
-                            "end_bp": j,
-                            "dna": orf_dna,
-                            "protein": protein
-                        })
-                    break
-
-        i += 3
-
+    for start, end in _orf_endpoints_in_seq(seq, frame):
+        if max_bp is not None and (end - start) > max_bp:
+            continue
+        orf_dna = seq[start:end]
+        prot = translate_dna(orf_dna)
+        if len(prot) >= min_aa:
+            orfs.append({
+                "frame": frame,
+                "start_bp": start,
+                "end_bp": end,
+                "dna": orf_dna,
+                "protein": prot,
+                "protein_length_aa": len(prot),
+            })
     return orfs
 
-def six_frame_orfs(dna, circular=True):
+def _map_rev_start_to_fwd(start_bp_rev: int, orig_len: int) -> int:
+    """
+    Map a start position on the reverse-complemented sequence back to a forward coordinate.
+    This gives a forward-coordinate of the *corresponding* base position (0-based).
+    """
+    # reverse index 0 corresponds to forward index (len-1)
+    return (orig_len - 1 - start_bp_rev) % orig_len
+
+def six_frame_orfs(dna, circular=True, min_aa=20):
     """
     Get ORFs from all 6 frames (+0,+1,+2 and -0,-1,-2).
     """
@@ -156,30 +161,45 @@ def six_frame_orfs(dna, circular=True):
     reverse_sequence = reverse_complement(forward_sequence)
 
     all_orfs = []
+    max_bp= original_length if circular else None
 
     # Forward strand
-    for frame in [0, 1, 2]:
-        for orf in find_orfs_in_frame(forward_sequence, frame):
+    for frame in (0, 1, 2):
+        for orf in find_orfs_in_frame(forward_sequence, frame, min_aa=min_aa, max_bp=max_bp):
             if orf["start_bp"] < original_length:
+                start = orf["start_bp"]
+                end = orf["end_bp"]
+                wrap = end > original_length
                 all_orfs.append({
+                    "strand": "+",
                     "frame": f"+{frame}",
-                    "start_bp": orf["start_bp"],
+                    "start_bp": start % original_length,
+                    "end_bp": end % original_length,
+                    "wraparound": wrap,
                     "dna": orf["dna"],
                     "protein": orf["protein"],
-                    "protein_length_aa": len(orf["protein"])
+                    "protein_length_aa": orf.get("protein_length_aa", len(orf["protein"]))
                 })
 
     # Reverse strand
-    for frame in [0, 1, 2]:
-        for orf in find_orfs_in_frame(reverse_sequence, frame):
+    for frame in (0, 1, 2):
+        for orf in find_orfs_in_frame(reverse_sequence, frame, min_aa=min_aa, max_bp=max_bp):
             if orf["start_bp"] < original_length:
+                # map start/end back to forward coords (approx; good enough for reporting)
+                start_fwd = _map_rev_start_to_fwd(orf["start_bp"], original_length)
+                end_fwd = _map_rev_start_to_fwd(orf["end_bp"], original_length)
+                wrap = orf["end_bp"] > original_length
                 all_orfs.append({
+                    "strand": "-",
                     "frame": f"-{frame}",
-                    "start_bp": orf["start_bp"],  # position on reverse_sequence (fine if not using coords)
+                    "start_bp": start_fwd,
+                    "end_bp": end_fwd,
+                    "wraparound": wrap,
                     "dna": orf["dna"],
                     "protein": orf["protein"],
-                    "protein_length_aa": len(orf["protein"])
+                    "protein_length_aa": orf.get("protein_length_aa", len(orf["protein"]))
                 })
+
 
     return all_orfs
 
@@ -193,7 +213,56 @@ def pick_longest_orf(orfs):
     best = orfs[0]
     for orf in orfs:
         if orf["protein_length_aa"] > best["protein_length_aa"]:
-            best = orf
+            best = orf 
 
     return best
 
+def _simple_identity(a: str, b: str) -> float:
+    """
+    Simple position-wise identity on the overlapping region.
+    (Not a full alignment; good lightweight scoring for close sequences.)
+    """
+    if not a or not b:
+        return 0.0
+    n = min(len(a), len(b))
+    matches = sum(1 for i in range(n) if a[i] == b[i])
+    return matches / n
+
+def pick_best_orf(orfs: List[Dict[str, Any]], wt_protein: Optional[str] = None) -> Dict[str, Any]:
+    if not orfs:
+        raise SequenceError("No ORFs found.")
+
+    if wt_protein:
+        wt = wt_protein.strip().upper()
+        # prioritise: highest identity, then longer length
+        best = max(orfs, key=lambda o: (_simple_identity(o["protein"], wt), o["protein_length_aa"]))
+        best["match_identity"] = _simple_identity(best["protein"], wt)
+        return best
+
+    return max(orfs, key=lambda o: o["protein_length_aa"])
+
+def identify_recombinant_gene(
+    plasmid_dna: str,
+    wt_protein: Optional[str] = None,
+    circular: bool = True,
+    min_aa: int = 200,
+) -> Dict[str, Any]:
+    orfs = six_frame_orfs(plasmid_dna, circular=circular, min_aa=min_aa)
+    best = pick_best_orf(orfs, wt_protein=wt_protein)
+
+    cds_dna = best["dna"]
+    mrna = transcribe_dna_to_rna(cds_dna)
+    protein = best["protein"]
+
+    return {
+        **best,
+        "cds_dna": cds_dna,
+        "mrna": mrna,
+        "protein": protein,
+
+        "plasmid_length": len(validate_dna(plasmid_dna)),
+        "cds_length_bp": len(cds_dna),
+        "protein_length_aa": len(protein),
+    }
+
+ 
