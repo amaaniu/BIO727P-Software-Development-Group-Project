@@ -72,8 +72,6 @@ COLUMN_NAME_MAP = {
     'wt_sequence': 'wt_protein_sequence',
     'wt_seq': 'wt_protein_sequence',
     'wild_type_sequence': 'wt_protein_sequence',
-    # protein_features
-    'features': 'protein_features',
     # plasmid_sequence
     'wt_plasmid_sequence': 'plasmid_sequence',
     'plasmid_seq': 'plasmid_sequence',
@@ -158,7 +156,7 @@ ACTIVITY_REQUIRED = {'measurement_type', 'raw_value'}
 CONTROL_REQUIRED = {'control_type', 'generation', 'protein_yield', 'dna_yield'}  
 
 # All fields for each data type
-EXPERIMENT_FIELDS = ['experiment_name', 'uniprot_id', 'wt_protein_sequence', 'protein_features', 'plasmid_sequence', 'status']
+EXPERIMENT_FIELDS = ['experiment_name', 'uniprot_id', 'wt_protein_sequence', 'plasmid_sequence', 'status']
 VARIANT_FIELDS = ['generation', 'plasmid_variant_index', 'dna_sequence', 'protein_sequence', 'protein_yield', 'dna_yield', 'activity_score', 'mutation_count']
 MUTATION_FIELDS = ['position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation', 'codon_change']
 ACTIVITY_FIELDS = ['measurement_type', 'raw_value', 'qc_pass']  

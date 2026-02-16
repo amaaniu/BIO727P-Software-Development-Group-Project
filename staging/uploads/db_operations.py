@@ -1,6 +1,6 @@
 # db_operations.py
 
-from models import db, Experiment, Variant, Mutations, Activity, ControlData
+from models import db, Experiment, Variant, Mutations, Activity, ControlData, UniProtData, UniProtFeature
 from datetime import datetime
 import json
 
@@ -23,7 +23,6 @@ def insert_experiment_records(records, user_id):
             experiment_name=record['experiment_name'],
             uniprot_id=record['uniprot_id'],
             wt_protein_sequence=record.get('wt_protein_sequence'),
-            protein_features=record.get('protein_features'),
             plasmid_sequence=record.get('plasmid_sequence'),
             status=record.get('status'),
             created_at=datetime.utcnow()
@@ -179,7 +178,7 @@ def insert_mutation_records(records, variant_id):
 def insert_activity_records(records, variant_id):
     """
     Insert activity records into database.
-    
+    `
     Args:
         records: List of activity dicts from file_processor
         variant_id: ID of variant these activities belong to
@@ -330,3 +329,4 @@ def process_and_insert(file, experiment_id=None, user_id=None):
     except Exception as e:
         db.session.rollback()
         raise Exception(f"Database insertion failed: {str(e)}")
+    

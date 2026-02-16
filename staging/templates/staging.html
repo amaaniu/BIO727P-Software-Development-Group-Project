@@ -7,7 +7,7 @@
 
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div>
-        <span class="section-badge section-badge-accent">Staging</span>
+        <span class="section-badge section-badge-accent">Staging</span> 
         <h1 class="h3 mb-1">Data upload</h1>
         <p class="text-muted mb-0">
           1) UniProt ID → 2) Plasmid FASTA → 3) JSON/TSV upload
@@ -141,6 +141,7 @@
   const dataStatus = document.getElementById("dataStatus");
 
   let wtSequence = "";
+  let experimentId = null;
 
   function setStatus(el, type, msg) {
     // type: "success" | "danger" | "info" | "warning"
@@ -162,6 +163,7 @@
     uniprotSummary.innerHTML = "";
 
     wtSequence = "";
+    experimentId = null;
 
     if (message) setStatus(uniprotStatus, "warning", message);
     else uniprotStatus.innerHTML = "";
@@ -201,6 +203,8 @@
         resetAll(data.error || "Invalid UniProt accession.");
         return;
       }
+      
+      experimentId= data.experiment_id;
 
       const wt = data.wt;
       wtSequence = wt.sequence;
@@ -289,6 +293,7 @@
 
     const formData = new FormData();
     formData.append("fastaFile", file);
+    formData.append("experiment_id", experimentId);
     formData.append("wt_sequence", wtSequence);
 
     try {
@@ -328,11 +333,17 @@
     const file = dataFileInput.files?.[0];
     if (!file) return;
 
+    if (!experimentId) {
+      setStatus(dataStatus, "danger", "Missing experiment_id. Please redo UniProt step.");
+      return;
+  
+    }
+
     setStatus(dataStatus, "info", "Processing data file...");
 
     const formData = new FormData();
     formData.append("dataFile", file);
-
+    formData.append("experiment_id", experimentId);
     try {
       const res = await fetch("/api/upload-data", {
         method: "POST",

@@ -7,8 +7,9 @@ import sqlite3
 
 app = Flask(__name__)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///experiments.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///experiment.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = "dev"
 
 db.init_app(app)
 

@@ -14,7 +14,7 @@ What this does:
 """
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, List, Dict, Any, Tuple
 
 
 # Genetic code
@@ -70,7 +70,7 @@ def reverse_complement(dna):
     """
     complement = {"A": "T", "T": "A","C": "G","G": "C","N": "N"}
     dna= dna.upper()
-    return "".join(comp[b] for b in reversed(dna))
+    return "".join(complement[b] for b in reversed(dna))
 
 
 def transcribe_dna_to_rna(dna: str) -> str:
@@ -102,11 +102,11 @@ def _orf_endpoints_in_seq(dna, frame):
     """
     out = []
     i = frame
-    while i <= len(seq) - 3:
+    while i <= len(dna) - 3:
         if dna[i:i+3] == "ATG":
             j = i
-            while j <= len(seq) - 3:
-                codon = seq[j:j+3]
+            while j <= len(dna) - 3:
+                codon = dna[j:j+3]
                 if codon in STOP_CODONS:
                     out.append((i, j))  # stop excluded
                     break
@@ -122,10 +122,10 @@ def find_orfs_in_frame(dna, frame, min_aa, max_bp=None):
     """
     dna = dna.upper()
     orfs = []
-    for start, end in _orf_endpoints_in_seq(seq, frame):
+    for start, end in _orf_endpoints_in_seq(dna, frame):
         if max_bp is not None and (end - start) > max_bp:
             continue
-        orf_dna = seq[start:end]
+        orf_dna = dna[start:end]
         prot = translate_dna(orf_dna)
         if len(prot) >= min_aa:
             orfs.append({
@@ -146,7 +146,7 @@ def _map_rev_start_to_fwd(start_bp_rev: int, orig_len: int) -> int:
     # reverse index 0 corresponds to forward index (len-1)
     return (orig_len - 1 - start_bp_rev) % orig_len
 
-def six_frame_orfs(dna, circular=True, min_aa=20):
+def six_frame_orfs(dna, circular=True, min_aa=50):
     """
     Get ORFs from all 6 frames (+0,+1,+2 and -0,-1,-2).
     """
@@ -236,8 +236,9 @@ def pick_best_orf(orfs: List[Dict[str, Any]], wt_protein: Optional[str] = None) 
         wt = wt_protein.strip().upper()
         # prioritise: highest identity, then longer length
         best = max(orfs, key=lambda o: (_simple_identity(o["protein"], wt), o["protein_length_aa"]))
-        best["match_identity"] = _simple_identity(best["protein"], wt)
-        return best
+        best_out = dict(best)
+        best_out["match_identity"] = _simple_identity(best_out["protein"], wt)
+        return best_out
 
     return max(orfs, key=lambda o: o["protein_length_aa"])
 

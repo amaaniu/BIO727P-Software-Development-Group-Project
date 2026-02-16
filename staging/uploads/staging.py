@@ -68,8 +68,8 @@ def parse_fasta(fasta_text):
     if not fasta_text or not fasta_text.strip():
         raise FastaError("Empty FASTA file.")  
 
-    # DNA letters allowed in plasmid FASTA (includes common ambiguity codes)
-    allowed = set("ACGTNRYKMSWBDHV")
+    # DNA letters allowed in plasmid FASTA
+    allowed = set("ACGTN")
 
     header = None
     header_count = 0
@@ -127,9 +127,6 @@ def parse_fasta(fasta_text):
 
     return header, sequence
 
-from orf_translation import six_frame_orfs, pick_longest_orf
-
-
 def match_wt_exact(orfs, wt_protein):
 
     wt = wt_protein.strip().upper()
@@ -153,3 +150,14 @@ def match_wt_exact(orfs, wt_protein):
         "longest_orf_aa": max((len(o["protein"]) for o in orfs), default=0),
     }
 
+def validate_plasmid_fasta(fasta_text, wt_protein_sequence, min_aa=50):
+    header, dna_seq = parse_fasta(fasta_text)
+    orfs = six_frame_orfs(dna_seq, circular=True, min_aa=min_aa)
+    match = match_wt_exact(orfs, wt_protein_sequence)
+
+    return {
+        "header": header,
+        "dna_sequence": dna_seq,
+        "orfs_found": len(orfs),
+        **match
+    }
