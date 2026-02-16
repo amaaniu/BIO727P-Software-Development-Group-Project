@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WT Protein Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>WT Protein Staged</h2>
+
+<p><b>Accession:</b> {{ wt.accession }}</p>
+<p><b>Protein name:</b> {{ wt.protein_name }}</p>
+<p><b>Sequence length:</b> {{ wt.sequence_length }}</p>
+
+<h3>Amino Acid Sequence</h3>
+<pre>{{ wt.sequence }}</pre>
+
+<a href="/stage">Back</a>
+
+</body>
+</html>
+
