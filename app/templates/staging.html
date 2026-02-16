@@ -191,7 +191,7 @@
     dataFileInput.value = "";
 
     try {
-      const res = await fetch("/api/uniprot", {
+      const res = await fetch("/upload/api/uniprot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accession })
@@ -297,7 +297,7 @@
     formData.append("wt_sequence", wtSequence);
 
     try {
-      const res = await fetch("/api/validate-fasta", {
+      const res = await fetch("/upload/api/validate-fasta", {
         method: "POST",
         body: formData
       });
@@ -345,7 +345,7 @@
     formData.append("dataFile", file);
     formData.append("experiment_id", experimentId);
     try {
-      const res = await fetch("/api/upload-data", {
+      const res = await fetch("/upload/api/upload-data", {
         method: "POST",
         body: formData
       });
