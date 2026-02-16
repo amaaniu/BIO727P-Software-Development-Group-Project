@@ -1,6 +1,6 @@
 # db_operations.py
 
-from models import db, Experiment, Variant, Mutations, Activity, ControlData, UniProtData, UniProtFeature
+from app.models import db, Experiment, Variant, Mutations, Activity, ControlData, UniProtData, UniProtFeature
 from datetime import datetime
 import json
 
@@ -247,7 +247,7 @@ def process_and_insert(file, experiment_id=None, user_id=None):
     Raises:
         ValueError: If required IDs not provided or insertion fails
     """
-    from file_handling import process_file
+    from app.uploads.file_handling import process_file
     
     # Process file
     result = process_file(file)

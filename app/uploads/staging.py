@@ -1,5 +1,5 @@
 import requests
-from orf_translation import six_frame_orfs, pick_longest_orf
+from app.uploads.orf_translation import six_frame_orfs, pick_longest_orf
 
 def fetch_uniprot(accession):
     """Fetch UniProt data for a given accession number. Returns a dict with keys"""
