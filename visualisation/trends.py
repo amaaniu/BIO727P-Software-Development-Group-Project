@@ -4,21 +4,21 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-def summarise_activity_by_generation(df: pd.DataFrame) -> pd.DataFrame:
+def summarise_activity_by_generation(df: pd.DataFrame, score_col: str) -> pd.DataFrame:
     # required columns
-    required = {"generation", "activity_score"}
+    required = {"generation", score_col}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
     tmp = df.copy()
     tmp["generation"] = pd.to_numeric(tmp["generation"], errors="coerce")
-    tmp["activity_score"] = pd.to_numeric(tmp["activity_score"], errors="coerce")
-    tmp = tmp.dropna(subset=["generation", "activity_score"])
+    tmp[score_col] = pd.to_numeric(tmp[score_col], errors="coerce")
+    tmp = tmp.dropna(subset=["generation", score_col])
     tmp["generation"] = tmp["generation"].astype(int)
 
     summary = (
-        tmp.groupby("generation")["activity_score"]
+        tmp.groupby("generation")[score_col]
         .agg(
             n="count",
             median="median",
@@ -35,11 +35,12 @@ def summarise_activity_by_generation(df: pd.DataFrame) -> pd.DataFrame:
 def plot_activity_median_trend(
     df: pd.DataFrame,
     title: str = "Median Activity Score by generation",
+    score_col: str = "activity_score_log2",
     show_iqr: bool = True,
     show_markers: bool = True,
 ) -> go.Figure:
 
-    summary = summarise_activity_by_generation(df)
+    summary = summarise_activity_by_generation(df, score_col=score_col)
 
     fig = go.Figure()
 
@@ -63,7 +64,6 @@ def plot_activity_median_trend(
                 line=dict(width=0),
                 fill="tonexty",
                 name="IQR (25th–75th)",
-                hovertemplate="Gen %{x}<br>IQR: %{y:.3f}<extra></extra>",
             )
         )
 
@@ -74,17 +74,18 @@ def plot_activity_median_trend(
             y=summary["median"],
             mode="lines+markers" if show_markers else "lines",
             name="Median",
-            hovertemplate="Gen %{x}<br>Median: %{y:.3f}<extra></extra>",
         )
     )
 
     fig.update_layout(
         title=title,
         xaxis_title="Generation",
-        yaxis_title="Activity Score (unitless)",
+        yaxis_title="Activity Score (log2 normalised ratio)",
         template="simple_white",
     )
 
-    fig.update_xaxes(dtick=1)
+    # gridlines ON
+    fig.update_xaxes(dtick=1, showgrid=True, gridwidth=1)
+    fig.update_yaxes(showgrid=True, gridwidth=1)
 
     return fig

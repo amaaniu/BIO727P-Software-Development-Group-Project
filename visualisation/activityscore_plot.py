@@ -1,18 +1,17 @@
+# violin plot for activity score distribution per generation
+
 import pandas as pd
 import plotly.express as px
 
-from visualisation.data_sources import get_variants
 
-
-# violin plot for activity score distribution per generation
 def plot_activity_violin(
     df: pd.DataFrame,
     title: str = "Activity Score distribution by generation",
+    score_col: str = "activity_score_log2",
     show_points: bool = True,
 ):
-
-    # validating required columns (for transition from dummy to real data)
-    required = {"generation", "activity_score"}
+    # validating required columns
+    required = {"generation", score_col}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
@@ -20,21 +19,20 @@ def plot_activity_violin(
     # ensuring correct types/order
     df = df.copy()
     df["generation"] = pd.to_numeric(df["generation"], errors="coerce")
-    df["activity_score"] = pd.to_numeric(df["activity_score"], errors="coerce")
-    df = df.dropna(subset=["generation", "activity_score"])
+    df[score_col] = pd.to_numeric(df[score_col], errors="coerce")
+    df = df.dropna(subset=["generation", score_col])
 
     # ordering generations numerically
     gen_order = sorted(df["generation"].dropna().unique().tolist())
 
-    # plotly likes categorical x labels for spacing, so convert to string
+    # plotly likes categorical x labels for spacing
     df["generation"] = df["generation"].astype(int).astype(str)
     gen_order_str = [str(int(g)) for g in gen_order]
 
-    # violin plot (includes embedded boxplot; shows points if requested)
     fig = px.violin(
         df,
         x="generation",
-        y="activity_score",
+        y=score_col,
         category_orders={"generation": gen_order_str},
         box=True,
         points="all" if show_points else False,
@@ -43,16 +41,12 @@ def plot_activity_violin(
 
     fig.update_layout(
         xaxis_title="Generation",
-        yaxis_title="Activity Score (unitless)",
+        yaxis_title="Activity Score (log2 normalised ratio)",
         template="simple_white",
     )
 
+    # gridlines 
+    fig.update_xaxes(showgrid=True, gridwidth=1)
+    fig.update_yaxes(showgrid=True, gridwidth=1)
+
     return fig
-
-
-# quick local demo run (dummy for now... later will change get_variants source)
-if __name__ == "__main__":
-
-    df = get_variants(source="dummy")
-    fig = plot_activity_violin(df)
-    fig.show()

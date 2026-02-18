@@ -16,14 +16,15 @@ def save_plotly_figure(fig, out_prefix: str):
     html_path = OUTPUT_DIR / f"{out_prefix}.html"
     fig.write_html(str(html_path))
 
-    # png output (optional; requires kaleido)
+    # png output (optional; requires kaleido install)
     png_path = OUTPUT_DIR / f"{out_prefix}.png"
     try:
         fig.write_image(str(png_path), scale=2)
-    except Exception:
+    except Exception as e:
         png_path = None
+        print(f"PNG export skipped (install kaleido to enable). Details: {e}")
 
-    return html_path, png_path
+    return str(html_path), (str(png_path) if png_path else None)
 
 
 # save a dataframe to csv
@@ -31,10 +32,10 @@ def save_table_csv(df: pd.DataFrame, out_name: str):
 
     csv_path = OUTPUT_DIR / f"{out_name}.csv"
     df.to_csv(csv_path, index=False)
-    return csv_path
+    return str(csv_path)
 
 
-# save top 10 table as a png image (optional; requires matplotlib)
+# save top 10 table as a png image (requires matplotlib)
 def save_top10_table_png(top10: pd.DataFrame, out_name: str = "top10_variants_table"):
 
     import matplotlib.pyplot as plt
@@ -43,10 +44,14 @@ def save_top10_table_png(top10: pd.DataFrame, out_name: str = "top10_variants_ta
     ax.axis("off")
 
     display_df = top10.copy()
-    if "activity_score" in display_df.columns:
-        display_df["activity_score"] = display_df["activity_score"].map(lambda x: f"{x:.3f}")
+
+    # format numeric columns nicely
+    if "activity_score_log2" in display_df.columns:
+        display_df["activity_score_log2"] = display_df["activity_score_log2"].map(lambda x: f"{x:.3f}")
+
     if "protein_yield" in display_df.columns:
         display_df["protein_yield"] = display_df["protein_yield"].map(lambda x: f"{x:.1f}")
+
     if "dna_yield" in display_df.columns:
         display_df["dna_yield"] = display_df["dna_yield"].map(lambda x: f"{x:.1f}")
 
@@ -61,11 +66,11 @@ def save_top10_table_png(top10: pd.DataFrame, out_name: str = "top10_variants_ta
     table.set_fontsize(10)
     table.scale(1, 1.5)
 
-    ax.set_title("Top 10 variants by activity score", pad=12)
+    ax.set_title("Top 10 variants by activity score (log2)", pad=12)
 
     png_path = OUTPUT_DIR / f"{out_name}.png"
     plt.tight_layout()
     plt.savefig(png_path, dpi=200)
     plt.close(fig)
 
-    return png_path
+    return str(png_path)
