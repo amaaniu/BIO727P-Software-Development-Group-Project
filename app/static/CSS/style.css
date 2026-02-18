@@ -432,3 +432,22 @@ a:focus-visible {
   outline-offset: 2px;
   box-shadow: none !important;
 }
+
+/* Apply to body OR your outermost wrapper div */
+body {
+    display: flex;
+    flex-direction: column;
+    /* Use 100dvh for mobile address bar compatibility, fallback to 100vh */
+    min-height: 100vh; 
+    min-height: 100dvh;
+    margin: 0;
+}
+
+/* The element containing your {% block content %} */
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    flex-shrink: 0;
+}
