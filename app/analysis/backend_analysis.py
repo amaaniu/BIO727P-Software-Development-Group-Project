@@ -10,7 +10,7 @@ from app.uploads.orf_translation import identify_recombinant_gene, CODON_TABLE
 # ACTIVITY SCORE FUNCTIONS
 # ============================
 
-def compute_activity_score_raw(
+def compute_activity_score_log2(
     dna_yield: float,
     protein_yield: float,
     wt_dna_yield: float,
@@ -32,56 +32,14 @@ def compute_activity_score_raw(
     if protein_norm == 0:
         return None
 
-    activity_score_raw = dna_norm / protein_norm
+    activity_score_log2 = math.log2(dna_norm / protein_norm)
 
     return {
         "dna_norm": dna_norm,
         "protein_norm": protein_norm,
-        "activity_score_raw": activity_score_raw,
+        "activity_score_log2": activity_score_log2,
     }
-
-
-def compute_activity_score_log2(
-    dna_yield: float,
-    protein_yield: float,
-    wt_dna_yield: float,
-    wt_protein_yield: float
-) -> Optional[Dict[str, Any]]:
-
-    result = compute_activity_score_raw(
-        dna_yield,
-        protein_yield,
-        wt_dna_yield,
-        wt_protein_yield
-    )
-
-    if result is None:
-        return None
-
-    raw = result["activity_score_raw"]
-
-    result["activity_score_log2"] = (
-        math.log2(raw) if raw > 0 else None
-    )
-
-    return result
-
-
-def compute_activity_scores(
-    dna_yield: float,
-    protein_yield: float,
-    wt_dna_yield: float,
-    wt_protein_yield: float
-) -> Optional[Dict[str, Any]]:
-
-    return compute_activity_score_log2(
-        dna_yield,
-        protein_yield,
-        wt_dna_yield,
-        wt_protein_yield
-    )
-
-
+ 
 # ============================
 # MUTATION TRACKER
 # ============================
@@ -195,7 +153,7 @@ def analyse_variant(
     )
 
     # Activity score
-    activity_result = compute_activity_scores(
+    activity_result = compute_activity_score_log2(
         dna_yield,
         protein_yield,
         wt_dna_yield,
@@ -223,10 +181,6 @@ def analyse_variant(
         "variant_summary": {
             "protein_sequence": var_gene["protein"],
             "mutation_count": mutation_result["mutation_count"],
-            "activity_score_raw": (
-                activity_result["activity_score_raw"]
-                if activity_result else None
-            ),
             "activity_score_log2": (
                 activity_result["activity_score_log2"]
                 if activity_result else None
