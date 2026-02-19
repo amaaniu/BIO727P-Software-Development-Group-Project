@@ -121,4 +121,3 @@ def main():
 
     print("\n=== SUMMARY ===")
     print(result["variant_summary"])
-
