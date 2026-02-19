@@ -4,6 +4,8 @@ from app.models import db, Experiment, Variant, Mutations, Activity, ControlData
 from datetime import datetime
 import json
 
+from app.analysis.backend_analysis import analyse_variant
+
 def insert_experiment_records(records, user_id):
     """
     Insert experiment records into database.
@@ -120,8 +122,33 @@ def insert_variant_records(records, experiment_id):
         List of created Variant objects with variant_id populated
     """
     variant_objects = []
+
+    experiment = Experiment.query.get(experiment_id)
+    if not experiment or not experiment.plasmid_sequence:
+        raise ValueError("WT plasmid_sequence missing for this experiment.")
+    wt_plasmid_sequence = experiment.plasmid_sequence
     
     for record in records:
+        analysis = analyse_variant(
+            wt_plasmid_sequence=wt_plasmid_sequence,
+            variant_plasmid_sequence=record["dna_sequence"],
+            generation=int(record["generation"]),
+            dna_yield=float(record["dna_yield"]),
+            protein_yield=float(record["protein_yield"]),
+            wt_dna_yield=float(record["dna_yield"]),          
+            wt_protein_yield=float(record["protein_yield"]),  
+)
+
+        mutation_result = analysis["mutations"]
+        activity_result = analysis["activity"]
+
+        protein_sequence = analysis["variant"]["protein"]
+        mutation_count = mutation_result["mutation_count"]
+        activity_score =(
+            activity_result["activity_score_log2"] 
+            if activity_result else None
+        )
+        
         variant = Variant(
             experiment_id=experiment_id,
             generation=record['generation'],
@@ -138,10 +165,25 @@ def insert_variant_records(records, experiment_id):
         )
         
         db.session.add(variant)
-        variant_objects.append(variant)
-    
+        db.session.flush()
+
+        for m in mutation_result["mutation_records"]:
+            db.session.add
+            (Mutations(
+                variant_id=variant.variant_id,
+                position=m["position"],
+                wt_residue=m["wt_residue"],
+                mutant_residue=m["mutant_residue"],
+                mutation_type=m["mutation_type"],
+                generation=m["generation"],
+                codon_change=m.get("codon_change"),
+        ))
+
+    variant_objects.append(variant)
+
     db.session.commit()
     return variant_objects
+
 
 
 def insert_mutation_records(records, variant_id):
