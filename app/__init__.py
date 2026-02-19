@@ -31,11 +31,14 @@ def create_app():
     from .main import main_bp 
     from .auth import auth_bp
     from .upload import upload_bp 
+    from .report import report_bp
+
 
     app.register_blueprint(main_bp)  # Register the main blueprint with a URL prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes
     app.register_blueprint(upload_bp, url_prefix='/upload')  # Register the uploads blueprint with a URL prefix for upload routes
     #app.register_blueprint(other_blueprint)  # Register other blueprints as needed
+    app.register_blueprint(report_bp, url_prefix='/report')  # Register the report blueprint with a URL prefix for report routes
     
     with app.app_context():
         db.create_all()  # Creates the database tables based on the defined models if they do not already exist

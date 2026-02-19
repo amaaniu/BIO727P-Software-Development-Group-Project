@@ -118,6 +118,16 @@
       </div>
     </div>
 
+    <!-- NEXT BUTTON (hidden until Step 3 succeeds) -->
+    <div class="d-grid mt-3">
+      <a id="nextButton"
+         href="#"
+         class="btn btn-success btn-lg"
+         style="display:none;">
+        Next → View Report
+      </a>
+    </div>
+    
   </div>
 </div>
 
@@ -139,6 +149,8 @@
 
   const dataFileInput = document.getElementById("dataFile");
   const dataStatus = document.getElementById("dataStatus");
+
+  const nextButton = document.getElementById("nextButton");
 
   let wtSequence = "";
   let experimentId = null;
@@ -165,6 +177,10 @@
     wtSequence = "";
     experimentId = null;
 
+    // hide Next button
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
     if (message) setStatus(uniprotStatus, "warning", message);
     else uniprotStatus.innerHTML = "";
   }
@@ -189,6 +205,10 @@
     dataStatus.innerHTML = "";
     fastaFileInput.value = "";
     dataFileInput.value = "";
+
+    // hide Next button
+    nextButton.style.display = "none";
+    nextButton.href = "#";
 
     try {
       const res = await fetch("/upload/api/uniprot", {
@@ -281,6 +301,10 @@
     step3.style.display = "none";
     dataStatus.innerHTML = "";
 
+    // hide Next button when FASTA changes
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
     const file = fastaFileInput.files?.[0];
     if (!file) return;
 
@@ -333,6 +357,10 @@
     const file = dataFileInput.files?.[0];
     if (!file) return;
 
+    // hide Next button when data file changes
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
     if (!experimentId) {
       setStatus(dataStatus, "danger", "Missing experiment_id. Please redo UniProt step.");
       return;
@@ -362,6 +390,10 @@
         "success",
         `File valid `
       );
+
+      // SHOW NEXT BUTTON + LINK TO REPORT ROUTE
+      nextButton.style.display = "block";
+      nextButton.href = `/report/${experimentId}`;
 
     } catch (err) {
       setStatus(dataStatus, "danger", "Network/server error processing file.");

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+  <h1 class="mb-3">Analysis</h1>
+
+  <!-- STATUS -->
+  <div id="statusBlock" class="card mb-4">
+    <div class="card-body">
+      <h2 id="statusTitle" class="h5 mb-2">Analysis in progress…</h2>
+      <p id="statusText" class="text-muted mb-3">
+        Please wait while we generate your report.
+      </p>
+
+      <!-- Loading bar -->
+      <div class="progress" style="height: 18px;">
+        <div id="progressBar"
+             class="progress-bar progress-bar-striped progress-bar-animated"
+             role="progressbar"
+             style="width: 0%;"
+             aria-valuenow="0"
+             aria-valuemin="0"
+             aria-valuemax="100">
+        </div>
+      </div>
+
+      <small id="progressLabel" class="text-muted d-block mt-2">0%</small>
+    </div>
+  </div>
+
+  <!-- RESULTS (hidden unless data exists OR fake bar completes) -->
+  <div id="resultsBlock"
+       class="card {% if not (viz1 or viz2 or viz3 or viz4 or viz5 or summary) %}d-none{% endif %}">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Report</h2>
+
+      <div class="mb-4">
+        <h3 class="h6 mb-2">Visualisation 1</h3>
+        {% if viz1 %}
+          {{ viz1|safe }}
+        {% else %}
+          <p class="text-muted mb-0">[viz1 placeholder]</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h6 mb-2">Visualisation 2</h3>
+        {% if viz2 %}
+          {{ viz2|safe }}
+        {% else %}
+          <p class="text-muted mb-0">[viz2 placeholder]</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h6 mb-2">Visualisation 3</h3>
+        {% if viz3 %}
+          {{ viz3|safe }}
+        {% else %}
+          <p class="text-muted mb-0">[viz3 placeholder]</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h6 mb-2">Visualisation 4</h3>
+        {% if viz4 %}
+          {{ viz4|safe }}
+        {% else %}
+          <p class="text-muted mb-0">[viz4 placeholder]</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h6 mb-2">Visualisation 5</h3>
+        {% if viz5 %}
+          {{ viz5|safe }}
+        {% else %}
+          <p class="text-muted mb-0">[viz5 placeholder]</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <h3 class="h6 mb-2">Summary</h3>
+        {% if summary %}
+          <pre class="mb-0">{{ summary }}</pre>
+        {% else %}
+          <pre class="mb-0">[summary placeholder]</pre>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Fake 10-second demo progress animation.
+  // If results already exist (viz1..viz5/summary passed from Flask), skip the animation.
+  const resultsAlreadyPresent = {{ 'true' if (viz1 or viz2 or viz3 or viz4 or viz5 or summary) else 'false' }};
+
+  if (!resultsAlreadyPresent) {
+    const totalMs = 10000;
+    const tickMs = 100;
+    const steps = totalMs / tickMs;
+    let current = 0;
+
+    const bar = document.getElementById("progressBar");
+    const label = document.getElementById("progressLabel");
+    const title = document.getElementById("statusTitle");
+    const text = document.getElementById("statusText");
+    const results = document.getElementById("resultsBlock");
+
+    const timer = setInterval(() => {
+      current++;
+      const pct = Math.min(100, Math.round((current / steps) * 100));
+
+      bar.style.width = pct + "%";
+      bar.setAttribute("aria-valuenow", pct);
+      label.textContent = pct + "%";
+
+      if (pct >= 100) {
+        clearInterval(timer);
+
+        // swap status text
+        title.textContent = "Analysis complete";
+        text.textContent = "Report has been generated.";
+
+        // stop animation stripes
+        bar.classList.remove("progress-bar-animated");
+        bar.classList.remove("progress-bar-striped");
+
+        // reveal results
+        results.classList.remove("d-none");
+      }
+    }, tickMs);
+  } else {
+    // If results are already present, make the status look "complete" immediately.
+    const bar = document.getElementById("progressBar");
+    const label = document.getElementById("progressLabel");
+    const title = document.getElementById("statusTitle");
+    const text = document.getElementById("statusText");
+
+    bar.style.width = "100%";
+    bar.setAttribute("aria-valuenow", "100");
+    label.textContent = "100%";
+
+    title.textContent = "Analysis complete";
+    text.textContent = "Report has been generated.";
+
+    bar.classList.remove("progress-bar-animated");
+    bar.classList.remove("progress-bar-striped");
+  }
+</script>
+{% endblock %}

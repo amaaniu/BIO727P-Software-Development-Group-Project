@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, render_template, request, session
 
 from app.models import Experiment, UniProtData, UniProtFeature, User, db
-from app.uploads.db_operations import process_and_insert, update_experiment_plasmid
+from app.db_operations import process_and_insert, update_experiment_plasmid
 from app.uploads.file_handling import process_file
 from app.uploads.orf_translation import six_frame_orfs
 from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta

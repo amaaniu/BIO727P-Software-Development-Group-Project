@@ -19,5 +19,12 @@ dependencies:
   - pip:
       - flask-sqlalchemy
       - flask-login
+      - thefuzz[speedup]
+      - mkdocs
+      - mkdocs-material
+      - mkdocs-material-extensions
+      - kaleido
+
+
 
 

@@ -1,5 +1,5 @@
 # This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
-from flask import Blueprint, render_template, request, abort
+from flask import Blueprint, render_template, request, abort, redirect, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
 from . import db
@@ -175,7 +175,7 @@ def view_report(experiment_id):
     )
     if experiment is None:
         abort(404)
-    return f"Report view coming soon for experiment: {experiment.experiment_name}"
+    return redirect(url_for('report.report', experiment_id=experiment_id))
 
 @main_bp.route('/experiments/new')
 @login_required
