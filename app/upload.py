@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request, session
+from flask_login import current_user, login_required
 
 from app.models import Experiment, UniProtData, UniProtFeature, User, db
 from app.uploads.db_operations import process_and_insert, update_experiment_plasmid
@@ -11,12 +12,14 @@ from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta
 upload_bp = Blueprint("upload", __name__)
 
 @upload_bp.route("/", methods=["GET"])
+@login_required
 def staging_page():
     return render_template("staging.html")
 
 @upload_bp.route("/api/uniprot", methods=["POST"])
+@login_required
 def api_uniprot():
-    user_id = session.get("user_id", 1)  # guest fallback
+    user_id = current_user.user_id  
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -96,6 +99,7 @@ def api_uniprot():
 
 
 @upload_bp.route("/api/validate-fasta", methods=["POST"])
+@login_required
 def api_validate_fasta():
     try:
         if "fastaFile" not in request.files:
@@ -142,8 +146,9 @@ def api_validate_fasta():
 
 
 @upload_bp.route("/api/upload-data", methods=["POST"])
+@login_required
 def api_upload_data():
-    user_id = session.get("user_id", 1)  # TEMP: avoid session KeyError
+    user_id = current_user.user_id 
 
     try:
         if "dataFile" not in request.files:
