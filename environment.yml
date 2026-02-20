@@ -19,5 +19,5 @@ dependencies:
   - pip:
       - flask-sqlalchemy
       - flask-login
-
-
+      - mkdocs
+      - mkdocs-material
