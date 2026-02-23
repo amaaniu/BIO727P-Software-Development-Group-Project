@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Tutorial{% endblock %}
+
+{% block content %}
+<section class="container-fluid p-0">
+  <div class="tutorial-shell">
+    <iframe
+      class="tutorial-frame"
+      src="{{ url_for('main.tutorial_docs', doc_path='index.html') }}"
+      title="Directed Evolution Tutorial Documentation"
+      loading="lazy">
+    </iframe>
+  </div>
+</section>
+{% endblock %}
