@@ -1,4 +1,4 @@
-# This file initialises the Flask application and registers all of the blueprints that form the web app.
+# This file initialises the Flask application and registers all of the blueprints that form the web app so that the app can be run. It also sets up the database and Flask-Login for user authentication and session management, key components of the web application. 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy 
 from flask_login import LoginManager
