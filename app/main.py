@@ -1,5 +1,6 @@
 # This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
-from flask import Blueprint, render_template, request, abort
+from pathlib import Path
+from flask import Blueprint, render_template, request, abort, current_app, send_from_directory
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
 from . import db
@@ -32,8 +33,17 @@ def documentation():
 @main_bp.route('/tutorial')
 def tutorial():
     """Renders the tutorial page."""
+    return render_template('tutorial.html')
 
-    return 'soon rendering template tutorial'
+
+@main_bp.route('/tutorial/docs/')
+@main_bp.route('/tutorial/docs/<path:doc_path>')
+def tutorial_docs(doc_path='index.html'):
+    """Serves built MkDocs pages under the tutorial route."""
+    docs_dir = Path(current_app.root_path).parent / 'site'
+    if not docs_dir.exists():
+        abort(404, description='Documentation is not built yet. Run "mkdocs build".')
+    return send_from_directory(docs_dir, doc_path)
 
 # Creates the route for the staging page, which is only accessible to authenticated users.
 @main_bp.route('/upload')
@@ -105,7 +115,7 @@ def dashboard():
                 func.lower(Experiment.uniprot_id).like(pattern),
             )
         )
-    # 4. Groups the query results by experiment attributes and sorts them in the specified order. experiments_query = (
+    # 4. Groups the query results by experiment attributes and sorts them in the specified order. 
         experiments_query = (
         experiments_query.group_by(
             Experiment.experiment_id,
@@ -146,7 +156,7 @@ def dashboard():
         'completed': sum(1 for exp in all_experiments if exp['status'] == 'Completed'),
     }
 
-    # 7. Applies the selected status filter to the list of experiments, allowing the user to view only experiments that match the chosen status category (e.g., all, staged, in-progress, completed). The filtered list of experiments is then passed to the dashboard template for rendering, along with the summary totals and current filter/sort settings for display on the dashboard page.
+    # 6. Applies the selected status filter to the list of experiments, allowing the user to view only experiments that match the chosen status category (e.g., all, staged, in-progress, completed). The filtered list of experiments is then passed to the dashboard template for rendering, along with the summary totals and current filter/sort settings for display on the dashboard page.
     if status_filter == 'all':
         experiments = all_experiments
     else:
@@ -181,3 +191,4 @@ def view_report(experiment_id):
 @login_required
 def new_experiment():
     return render_template('staging.html')
+
