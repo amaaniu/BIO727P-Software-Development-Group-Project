@@ -6,7 +6,6 @@ Single file containing:
 2) Backend database export helpers (Variant summary + Mutations table)
 3) A demo runner (CLI entrypoint) that loads exported JSON and calls plotting modules
 
-Plotting code is intentionally kept in separate modules to keep responsibilities clear.
 """
 
 from __future__ import annotations
@@ -51,7 +50,6 @@ def load_variants_from_json(path: str | Path) -> pd.DataFrame:
     path = _ensure_exists(path, "Variants JSON")
     df = pd.read_json(path)
 
-    # Coerce likely numeric columns (if present)
     for col in ("generation", "activity_score_log2", "mutation_count", "dna_yield", "protein_yield"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -96,9 +94,7 @@ def get_mutations(mutations_json_path: str | Path) -> pd.DataFrame:
 # =============================================================================
 # 2) BACKEND EXPORT HELPERS (DB -> list[dict])
 # =============================================================================
-# NOTE:
-# Keep these functions in the backend runtime environment where models/db exist.
-# The visualisation runner can still be used purely from JSON exports.
+
 
 _WT_LABELS = {"wt", "wildtype", "wild_type", "wild-type", "control_wt"}
 
@@ -291,8 +287,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     if args.mutations_json:
         muts_df = get_mutations(args.mutations_json)
 
-    # Import plotting code (kept separate by your request)
-    # These imports must match your actual filenames/modules.
+    
     from visualisation.activityscore_plot import plot_activity_violin  # type: ignore
     from visualisation.trends import plot_activity_median_trend  # type: ignore
     from visualisation.top10_table_only import compute_top10  # type: ignore
