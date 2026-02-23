@@ -1,4 +1,13 @@
-# violin plot for activity score distribution per generation
+"""
+Activity Score distribution plots.
+
+Required output (per brief):
+- per-generation distribution plot of the Activity Score.
+"""
+
+from __future__ import annotations
+
+from typing import Optional
 
 import pandas as pd
 import plotly.express as px
@@ -10,27 +19,46 @@ def plot_activity_violin(
     score_col: str = "activity_score_log2",
     show_points: bool = True,
 ):
-    # validating required columns
+    """
+    Plot a violin distribution of Activity Score per generation.
+
+    Parameters
+    ----------
+    df:
+        Variants dataframe.
+    title:
+        Figure title.
+    score_col:
+        Name of the score column (default 'activity_score_log2').
+    show_points:
+        If True, overlay individual points (useful for spotting outliers).
+
+    Returns
+    -------
+    plotly.graph_objs._figure.Figure
+        A Plotly figure suitable for embedding in Flask templates or exporting.
+
+    Raises
+    ------
+    ValueError
+        If required columns are missing.
+    """
     required = {"generation", score_col}
     missing = required - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required columns: {missing}")
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
 
-    # ensuring correct types/order
-    df = df.copy()
-    df["generation"] = pd.to_numeric(df["generation"], errors="coerce")
-    df[score_col] = pd.to_numeric(df[score_col], errors="coerce")
-    df = df.dropna(subset=["generation", score_col])
+    tmp = df.copy()
+    tmp["generation"] = pd.to_numeric(tmp["generation"], errors="coerce")
+    tmp[score_col] = pd.to_numeric(tmp[score_col], errors="coerce")
+    tmp = tmp.dropna(subset=["generation", score_col])
 
-    # ordering generations numerically
-    gen_order = sorted(df["generation"].dropna().unique().tolist())
-
-    # plotly likes categorical x labels for spacing
-    df["generation"] = df["generation"].astype(int).astype(str)
+    gen_order = sorted(tmp["generation"].unique().tolist())
+    tmp["generation"] = tmp["generation"].astype(int).astype(str)
     gen_order_str = [str(int(g)) for g in gen_order]
 
     fig = px.violin(
-        df,
+        tmp,
         x="generation",
         y=score_col,
         category_orders={"generation": gen_order_str},
@@ -44,8 +72,6 @@ def plot_activity_violin(
         yaxis_title="Activity Score (log2 normalised ratio)",
         template="simple_white",
     )
-
-    # gridlines 
     fig.update_xaxes(showgrid=True, gridwidth=1)
     fig.update_yaxes(showgrid=True, gridwidth=1)
 

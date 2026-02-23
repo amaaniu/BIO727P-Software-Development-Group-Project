@@ -4,6 +4,7 @@ outputs/
 *.html
 *.png
 *.csv
+*.pdf
 
 # python cache
 __pycache__/
