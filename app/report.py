@@ -26,7 +26,7 @@ import pandas as pd
 from plotly.io import to_html
 
 # DB models
-from app.models import db, Experiment, Variant, Mutations, ControlData   
+from app.models import db, Experiment, Variant, Mutations
 from app.db_operations import store_analysis_results
 from app.analysis.analysis import analyse_variant
 from app.visualisations.data_sources import get_variants, get_mutations
@@ -40,6 +40,14 @@ from app.visualisations.activity_landscape import plot_activity_landscape_3d
 
 # IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
+
+
+@report_bp.route("/<int:experiment_id>", methods=["GET"])
+def report_page(experiment_id: int):
+    exp = Experiment.query.get(experiment_id)
+    if not exp:
+        abort(404, description="Experiment not found")
+    return render_template("report.html", experiment_id=experiment_id)
 
 
 @report_bp.route("/api/run-analysis", methods=["POST"])
@@ -57,19 +65,37 @@ def api_run_analysis():
     if not exp.plasmid_sequence:
         return jsonify({"ok": False, "error": "WT plasmid FASTA not uploaded yet."}), 400
 
-    wt_protein_sequence = (exp.wt_protein_sequence or "").strip() or None
-
     variants = Variant.query.filter_by(experiment_id=exp.experiment_id).all()
     if not variants:
         return jsonify({"ok": False, "error": "No variants found for this experiment."}), 400
 
-    wt_control = ControlData.query.filter_by(experiment_id=exp.experiment_id).first()
-    if not wt_control:
-        return jsonify({"ok": False, "error": "No control data found (WT baseline missing)."}), 400
+    # Baseline (WT) yields:
+    # 1) Prefer experiment-level fields if your schema has them.
+    # 2) Fallback to earliest variant with non-null yields (usually generation 0).
+    wt_dna = getattr(exp, "wt_dna_yield", None)
+    wt_protein = getattr(exp, "wt_protein_yield", None)
 
-    # baseline
-    wt_dna_yield = float(wt_control.dna_yield)
-    wt_protein_yield = float(wt_control.protein_yield)
+    baseline_variant = None
+    if wt_dna is None or wt_protein is None:
+        yield_candidates = [
+            v for v in variants
+            if v.dna_yield is not None and v.protein_yield is not None
+        ]
+        if yield_candidates:
+            baseline_variant = min(
+                yield_candidates,
+                key=lambda v: (int(v.generation), int(v.variant_id)),
+            )
+            wt_dna = baseline_variant.dna_yield
+            wt_protein = baseline_variant.protein_yield
+
+    if wt_dna is None or wt_protein is None:
+        return jsonify({"ok": False, "error": "WT baseline missing (no experiment-level WT yields and no baseline variant)."}), 400
+
+    wt_dna_yield = float(wt_dna)
+    wt_protein_yield = float(wt_protein)
+    if wt_dna_yield == 0.0 or wt_protein_yield == 0.0:
+        return jsonify({"ok": False, "error": "WT baseline yields cannot be zero."}), 400
 
     try:
         analysed = 0
@@ -98,7 +124,6 @@ def api_run_analysis():
                 protein_yield=float(v.protein_yield),
                 wt_dna_yield=wt_dna_yield,
                 wt_protein_yield=wt_protein_yield,
-                wt_protein_sequence=wt_protein_sequence,
                 circular=True,
                 min_aa=200,
             )
@@ -157,87 +182,30 @@ def _fig_to_embed(fig):
         return ""
     return to_html(fig, full_html=False, include_plotlyjs="cdn")
 
-
-@report_bp.route("/<int:experiment_id>")
-def report(experiment_id: int):
+@report_bp.route("/api/render-report", methods=["GET"])
+def api_render_report():
+    experiment_id = request.args.get("experiment_id", type=int)
+    if not experiment_id:
+        return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
 
     exp = Experiment.query.get(experiment_id)
     if not exp:
-        abort(404, description="Experiment not found")
+        return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
-
-    variants_df = get_variants(experiment_id, source="dummy")
-
+    variants_df = get_variants(experiment_id)
     if variants_df.empty:
-        summary = "No variants available for this experiment yet."
-        return render_template(
-            "report.html",
-            viz1=None, viz2=None, viz3=None, viz4=None, viz5=None,
-            summary=summary
-        )
+        return jsonify({"ok": True, "summary": "No variants available yet.", "viz": {}})
 
-    
     try:
-        mutations_df = get_mutations(experiment_id, source="dummy")
+        mutations_df = get_mutations(experiment_id)
     except Exception:
         mutations_df = pd.DataFrame()
 
-    # ---- Top 10 table ----
-    try:
-        top10_df = compute_top10(variants_df)
-        selected_variant_id = (
-            top10_df.iloc[0]["variant_id"] if not top10_df.empty else None
-        )
+    has_scores = (
+        "activity_score_log2" in variants_df.columns
+        and variants_df["activity_score_log2"].notna().any()
+    )
 
-        viz5 = top10_df.to_html(
-            index=False,
-            classes="table table-sm table-striped table-bordered align-middle",
-            border=0,
-        )
-
-    except Exception as e:
-        viz5 = f"<p class='text-danger'>Top10 failed: {e}</p>"
-        selected_variant_id = None
-
-    # ---- Visualisations ----
-
-    try:
-        viz1 = _fig_to_embed(
-            plot_activity_violin(variants_df, score_col="activity_score_log2")
-        )
-    except Exception as e:
-        viz1 = f"<p class='text-danger'>Violin failed: {e}</p>"
-
-    try:
-        viz2 = _fig_to_embed(
-            plot_activity_median_trend(variants_df, score_col="activity_score_log2")
-        )
-    except Exception as e:
-        viz2 = f"<p class='text-danger'>Trend failed: {e}</p>"
-
-    try:
-        if selected_variant_id and not mutations_df.empty:
-            viz3 = _fig_to_embed(
-                plot_mutation_fingerprint(mutations_df, variant_id=selected_variant_id)
-            )
-        else:
-            viz3 = "<p class='text-muted'>No mutation fingerprint available.</p>"
-    except Exception as e:
-        viz3 = f"<p class='text-danger'>Fingerprint failed: {e}</p>"
-
-    try:
-        if not mutations_df.empty:
-            viz4 = _fig_to_embed(
-                plot_activity_landscape_3d(
-                    variants_df, mutations_df, score_col="activity_score_log2"
-                )
-            )
-        else:
-            viz4 = "<p class='text-muted'>No mutation data for landscape.</p>"
-    except Exception as e:
-        viz4 = f"<p class='text-danger'>Landscape failed: {e}</p>"
-
-    # ---- Summary ----
     generations = sorted(
         pd.to_numeric(variants_df["generation"], errors="coerce")
         .dropna()
@@ -253,12 +221,51 @@ def report(experiment_id: int):
         f"Generations: {generations}"
     )
 
-    return render_template(
-        "report.html",
-        viz1=viz1,
-        viz2=viz2,
-        viz3=viz3,
-        viz4=viz4,
-        viz5=viz5,
-        summary=summary,
-    )
+    # ---- 1) Top 10 table ----
+    try:
+        top10_df = compute_top10(variants_df)
+        selected_variant_id = int(top10_df.iloc[0]["variant_id"]) if not top10_df.empty else None
+        viz1 = top10_df.to_html(
+            index=False,
+            classes="table table-sm table-striped table-bordered align-middle",
+            border=0,
+        )
+    except Exception as e:
+        viz1 = f"<p class='text-danger'>Top10 failed: {e}</p>"
+        selected_variant_id = None
+
+    # ---- 2) Activity score plot ----
+    try:
+        viz2 = _fig_to_embed(plot_activity_violin(variants_df)) if has_scores else "<p class='text-muted'>No activity scores yet.</p>"
+    except Exception as e:
+        viz2 = f"<p class='text-danger'>Activity plot failed: {e}</p>"
+
+    # ---- 3) Trends ----
+    try:
+        viz3 = _fig_to_embed(plot_activity_median_trend(variants_df)) if has_scores else "<p class='text-muted'>No trend data yet.</p>"
+    except Exception as e:
+        viz3 = f"<p class='text-danger'>Trends failed: {e}</p>"
+
+    # ---- 4) Mutation fingerprint ----
+    try:
+        if selected_variant_id and not mutations_df.empty:
+            viz4 = _fig_to_embed(plot_mutation_fingerprint(mutations_df, selected_variant_id))
+        else:
+            viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
+    except Exception as e:
+        viz4 = f"<p class='text-danger'>Fingerprint failed: {e}</p>"
+
+    # ---- 5) Activity landscape ----
+    try:
+        if has_scores and not mutations_df.empty:
+            viz5 = _fig_to_embed(plot_activity_landscape_3d(variants_df, mutations_df))
+        else:
+            viz5 = "<p class='text-muted'>No landscape data available.</p>"
+    except Exception as e:
+        viz5 = f"<p class='text-danger'>Landscape failed: {e}</p>"
+
+    return jsonify({
+        "ok": True,
+        "summary": summary,
+        "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5}
+    })

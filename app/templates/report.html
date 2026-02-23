@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="container py-4">
 
@@ -13,7 +12,6 @@
         Please wait while we generate your report.
       </p>
 
-      <!-- Loading bar -->
       <div class="progress" style="height: 18px;">
         <div id="progressBar"
              class="progress-bar progress-bar-striped progress-bar-animated"
@@ -21,134 +19,149 @@
              style="width: 0%;"
              aria-valuenow="0"
              aria-valuemin="0"
-             aria-valuemax="100">
-        </div>
+             aria-valuemax="100"></div>
       </div>
-
       <small id="progressLabel" class="text-muted d-block mt-2">0%</small>
     </div>
   </div>
 
-  <!-- RESULTS (hidden unless data exists OR fake bar completes) -->
-  <div id="resultsBlock"
-       class="card {% if not (viz1 or viz2 or viz3 or viz4 or viz5 or summary) %}d-none{% endif %}">
+  <!-- RESULTS -->
+  <div id="resultsBlock" class="card d-none">
     <div class="card-body">
       <h2 class="h5 mb-3">Report</h2>
 
-      <div class="mb-4">
-        <h3 class="h6 mb-2">Visualisation 1</h3>
-        {% if viz1 %}
-          {{ viz1|safe }}
-        {% else %}
-          <p class="text-muted mb-0">[viz1 placeholder]</p>
-        {% endif %}
-      </div>
-
-      <div class="mb-4">
-        <h3 class="h6 mb-2">Visualisation 2</h3>
-        {% if viz2 %}
-          {{ viz2|safe }}
-        {% else %}
-          <p class="text-muted mb-0">[viz2 placeholder]</p>
-        {% endif %}
-      </div>
-
-      <div class="mb-4">
-        <h3 class="h6 mb-2">Visualisation 3</h3>
-        {% if viz3 %}
-          {{ viz3|safe }}
-        {% else %}
-          <p class="text-muted mb-0">[viz3 placeholder]</p>
-        {% endif %}
-      </div>
-
-      <div class="mb-4">
-        <h3 class="h6 mb-2">Visualisation 4</h3>
-        {% if viz4 %}
-          {{ viz4|safe }}
-        {% else %}
-          <p class="text-muted mb-0">[viz4 placeholder]</p>
-        {% endif %}
-      </div>
-
-      <div class="mb-4">
-        <h3 class="h6 mb-2">Visualisation 5</h3>
-        {% if viz5 %}
-          {{ viz5|safe }}
-        {% else %}
-          <p class="text-muted mb-0">[viz5 placeholder]</p>
-        {% endif %}
-      </div>
-
-      <div>
+      <!-- Summary FIRST -->
+      <div class="mb-4 d-none" id="summaryBlock">
         <h3 class="h6 mb-2">Summary</h3>
-        {% if summary %}
-          <pre class="mb-0">{{ summary }}</pre>
-        {% else %}
-          <pre class="mb-0">[summary placeholder]</pre>
-        {% endif %}
+        <pre class="mb-0" id="summaryText"></pre>
       </div>
+
+      <!-- Then visuals -->
+      <div class="mb-4 d-none" id="viz1Block">
+        <h3 class="h6 mb-2">Visualisation 1</h3>
+        <div id="viz1"></div>
+      </div>
+
+      <div class="mb-4 d-none" id="viz2Block">
+        <h3 class="h6 mb-2">Visualisation 2</h3>
+        <div id="viz2"></div>
+      </div>
+
+      <div class="mb-4 d-none" id="viz3Block">
+        <h3 class="h6 mb-2">Visualisation 3</h3>
+        <div id="viz3"></div>
+      </div>
+
+      <div class="mb-4 d-none" id="viz4Block">
+        <h3 class="h6 mb-2">Visualisation 4</h3>
+        <div id="viz4"></div>
+      </div>
+
+      <div class="mb-4 d-none" id="viz5Block">
+        <h3 class="h6 mb-2">Visualisation 5</h3>
+        <div id="viz5"></div>
+      </div>
+
     </div>
   </div>
 
 </div>
 
 <script>
-  // Fake 10-second demo progress animation.
-  // If results already exist (viz1..viz5/summary passed from Flask), skip the animation.
-  const resultsAlreadyPresent = {{ 'true' if (viz1 or viz2 or viz3 or viz4 or viz5 or summary) else 'false' }};
+  const experimentId = {{ experiment_id|tojson }};
 
-  if (!resultsAlreadyPresent) {
-    const totalMs = 10000;
-    const tickMs = 100;
-    const steps = totalMs / tickMs;
-    let current = 0;
+  const bar = document.getElementById("progressBar");
+  const label = document.getElementById("progressLabel");
+  const title = document.getElementById("statusTitle");
+  const text = document.getElementById("statusText");
 
-    const bar = document.getElementById("progressBar");
-    const label = document.getElementById("progressLabel");
-    const title = document.getElementById("statusTitle");
-    const text = document.getElementById("statusText");
-    const results = document.getElementById("resultsBlock");
+  const resultsBlock = document.getElementById("resultsBlock");
 
-    const timer = setInterval(() => {
-      current++;
-      const pct = Math.min(100, Math.round((current / steps) * 100));
+  const summaryBlock = document.getElementById("summaryBlock");
+  const summaryText = document.getElementById("summaryText");
 
-      bar.style.width = pct + "%";
-      bar.setAttribute("aria-valuenow", pct);
-      label.textContent = pct + "%";
+  const blocks = [
+    { block: document.getElementById("viz1Block"), el: document.getElementById("viz1"), key: "viz1" },
+    { block: document.getElementById("viz2Block"), el: document.getElementById("viz2"), key: "viz2" },
+    { block: document.getElementById("viz3Block"), el: document.getElementById("viz3"), key: "viz3" },
+    { block: document.getElementById("viz4Block"), el: document.getElementById("viz4"), key: "viz4" },
+    { block: document.getElementById("viz5Block"), el: document.getElementById("viz5"), key: "viz5" },
+  ];
 
-      if (pct >= 100) {
-        clearInterval(timer);
+  async function parseJsonResponse(response, fallbackMessage) {
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      const snippet = text ? text.slice(0, 120) : "";
+      throw new Error(`${fallbackMessage}. Server returned non-JSON: ${snippet}`);
+    }
+  }
 
-        // swap status text
-        title.textContent = "Analysis complete";
-        text.textContent = "Report has been generated.";
+  function setPct(pct) {
+    bar.style.width = pct + "%";
+    bar.setAttribute("aria-valuenow", String(pct));
+    label.textContent = pct + "%";
+  }
 
-        // stop animation stripes
-        bar.classList.remove("progress-bar-animated");
-        bar.classList.remove("progress-bar-striped");
+  // Smooth fake progress while server works (won't hit 100 until server done)
+  let fakePct = 0;
+  const fakeTimer = setInterval(() => {
+    // climb to 92% then wait
+    if (fakePct < 92) fakePct += Math.max(1, Math.round((92 - fakePct) * 0.06));
+    setPct(fakePct);
+  }, 120);
 
-        // reveal results
-        results.classList.remove("d-none");
-      }
-    }, tickMs);
-  } else {
-    // If results are already present, make the status look "complete" immediately.
-    const bar = document.getElementById("progressBar");
-    const label = document.getElementById("progressLabel");
-    const title = document.getElementById("statusTitle");
-    const text = document.getElementById("statusText");
+  async function runAnalysis() {
+    // 1) Trigger analysis (writes results to DB)
+    const res = await fetch("/report/api/run-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ experiment_id: experimentId })
+    });
 
-    bar.style.width = "100%";
-    bar.setAttribute("aria-valuenow", "100");
-    label.textContent = "100%";
+    const data = await parseJsonResponse(res, "Analysis request failed");
+    if (!res.ok || !data.ok) throw new Error(data.error || "Analysis failed");
+
+    // 2) Mark complete
+    clearInterval(fakeTimer);
+    setPct(100);
 
     title.textContent = "Analysis complete";
     text.textContent = "Report has been generated.";
 
     bar.classList.remove("progress-bar-animated");
     bar.classList.remove("progress-bar-striped");
+
+    // 3) Fetch rendered report content
+    const rr = await fetch(`/report/api/render-report?experiment_id=${encodeURIComponent(experimentId)}`);
+    const out = await parseJsonResponse(rr, "Render request failed");
+    if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
+
+    // reveal report container
+    resultsBlock.classList.remove("d-none");
+
+    // show summary FIRST
+    summaryText.textContent = out.summary || "";
+    summaryBlock.classList.remove("d-none");
+
+    // then visuals (staged)
+    const viz = out.viz || {};
+    for (const item of blocks) {
+      item.el.innerHTML = viz[item.key] || "<p class='text-muted'>No output.</p>";
+      item.block.classList.remove("d-none");
+      await new Promise(r => setTimeout(r, 250)); // small stagger for “nice”
+    }
   }
+
+  runAnalysis().catch(err => {
+    clearInterval(fakeTimer);
+    bar.classList.remove("progress-bar-animated");
+    bar.classList.remove("progress-bar-striped");
+
+    title.textContent = "Analysis failed";
+    text.textContent = err.message || "Something went wrong.";
+    setPct(100);
+  });
 </script>
 {% endblock %}
