@@ -49,7 +49,7 @@ class Variant(db.Model):
     activity_score = db.Column(db.Float)
     mutation_count = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    custom_metadata = db.Column(db.Text)  # ✓ FIXED - matches DB column name
+    custom_metadata = db.Column(db.Text)  
     
     # Relationships
     mutations = db.relationship('Mutations', backref='variant', lazy='dynamic')
@@ -69,18 +69,18 @@ class Mutations(db.Model):
 
 class Activity(db.Model):
     __tablename__ = 'Activity'
-    activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ✓ FIXED
+    activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'), nullable=False)
-    qc_pass = db.Column(db.Integer, nullable=False)  # ✓ ADDED - 0 or 1 for boolean
-    measurement_type = db.Column(db.Text, nullable=False)  # ✓ FIXED
-    raw_value = db.Column(db.Float, nullable=False)  # ✓ FIXED
+    qc_pass = db.Column(db.Integer, nullable=False)  
+    measurement_type = db.Column(db.Text, nullable=False) 
+    raw_value = db.Column(db.Float, nullable=False)  
 
 class ControlData(db.Model):
-    __tablename__ = 'Control_Data'  # ✓ FIXED - matches DB table name
+    __tablename__ = 'Control_Data'  
     control_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     experiment_id = db.Column(db.Integer, db.ForeignKey('Experiment.experiment_id'), nullable=False)
-    generation = db.Column(db.Integer, nullable=False)  # ✓ ADDED
-    control_type = db.Column(db.Text, nullable=False)  # ✓ FIXED from 'control_name'
+    generation = db.Column(db.Integer, nullable=False)  
+    control_type = db.Column(db.Text, nullable=False)  
     protein_yield = db.Column(db.Float, nullable=False)
     dna_yield = db.Column(db.Float, nullable=False)
 
