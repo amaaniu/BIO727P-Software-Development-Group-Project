@@ -250,7 +250,7 @@ def fetch_mutations_table(experiment_id: int) -> List[Dict[str, Any]]:
 
 
 # =============================================================================
-# 3) DEMO RUNNER (calls your existing plotting modules)
+# 3) DEMO RUNNER 
 # =============================================================================
 
 def _require_columns(df: pd.DataFrame, required: set[str], name: str) -> None:
