@@ -176,6 +176,7 @@ def fetch_variant_summary(experiment_id: int) -> List[Dict[str, Any]]:
     for v in variants:
         gen = int(v.generation)
         wt = wt_by_gen.get(gen)
+        variant_activity = getattr(v, "activity_score", None)
 
         dna_norm: Optional[float] = None
         protein_norm: Optional[float] = None
@@ -197,6 +198,10 @@ def fetch_variant_summary(experiment_id: int) -> List[Dict[str, Any]]:
         else:
             logger.debug("Missing WT baselines for generation=%s (experiment_id=%s)", gen, experiment_id)
 
+        # Fallback to analysis-stored activity score on Variant when WT controls are absent.
+        if activity_score_log2 is None and variant_activity is not None:
+            activity_score_log2 = float(variant_activity)
+
         rows.append(
             {
                 "variant_id": v.variant_id,
@@ -207,6 +212,7 @@ def fetch_variant_summary(experiment_id: int) -> List[Dict[str, Any]]:
                 "dna_norm": dna_norm,
                 "protein_norm": protein_norm,
                 "activity_score_log2": activity_score_log2,
+                "activity_score": variant_activity,
                 "mutation_count": getattr(v, "mutation_count", None),
                 "protein_sequence": getattr(v, "protein_sequence", None),
             }

@@ -67,6 +67,7 @@
 
 </div>
 
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
   const experimentId = {{ experiment_id|tojson }};
 
@@ -96,6 +97,46 @@
       const snippet = text ? text.slice(0, 120) : "";
       throw new Error(`${fallbackMessage}. Server returned non-JSON: ${snippet}`);
     }
+  }
+
+  function setHtmlWithScripts(target, html) {
+    target.innerHTML = "";
+    const template = document.createElement("template");
+    template.innerHTML = html || "";
+    const nodes = Array.from(template.content.childNodes);
+
+    for (const node of nodes) {
+      if (node.nodeName && node.nodeName.toLowerCase() === "script") {
+        const s = document.createElement("script");
+        for (const attr of node.attributes || []) {
+          s.setAttribute(attr.name, attr.value);
+        }
+        s.text = node.text || node.textContent || "";
+        target.appendChild(s);
+      } else {
+        target.appendChild(node.cloneNode(true));
+      }
+    }
+  }
+
+  function renderViz(target, payload) {
+    if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
+      target.innerHTML = "";
+      const fig = payload.figure || {};
+      try {
+        Plotly.newPlot(
+          target,
+          fig.data || [],
+          fig.layout || {},
+          { responsive: true, displayModeBar: true }
+        );
+      } catch (err) {
+        const msg = (err && err.message) ? err.message : String(err);
+        target.innerHTML = `<p class='text-danger'>Plot render failed: ${msg}</p>`;
+      }
+      return;
+    }
+    setHtmlWithScripts(target, payload || "<p class='text-muted'>No output.</p>");
   }
 
   function setPct(pct) {
@@ -148,7 +189,7 @@
     // then visuals (staged)
     const viz = out.viz || {};
     for (const item of blocks) {
-      item.el.innerHTML = viz[item.key] || "<p class='text-muted'>No output.</p>";
+      renderViz(item.el, viz[item.key]);
       item.block.classList.remove("d-none");
       await new Promise(r => setTimeout(r, 250)); // small stagger for “nice”
     }

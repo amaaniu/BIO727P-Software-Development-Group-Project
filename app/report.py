@@ -19,11 +19,9 @@ Make sure these folders are packages:
 
 from __future__ import annotations
 
+import json
 from flask import Blueprint, jsonify, render_template, abort, request
 import pandas as pd
-
-# Plotly HTML conversion
-from plotly.io import to_html
 
 # DB models
 from app.models import db, Experiment, Variant, Mutations
@@ -177,10 +175,11 @@ def api_summary():
     return jsonify({"ok": True, "variants": rows})
 
 
-def _fig_to_embed(fig):
+def _fig_to_payload(fig):
     if fig is None:
-        return ""
-    return to_html(fig, full_html=False, include_plotlyjs="cdn")
+        return None
+    # fig.to_plotly_json() can include numpy arrays; round-trip via JSON to make it Flask-jsonify safe.
+    return {"type": "plotly", "figure": json.loads(fig.to_json())}
 
 @report_bp.route("/api/render-report", methods=["GET"])
 def api_render_report():
@@ -192,32 +191,56 @@ def api_render_report():
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
+    # --- Pull data via datasources.py (DB -> list[dict] -> DataFrame) ---
     variants_df = get_variants(experiment_id)
-    if variants_df.empty:
+    if variants_df is None or variants_df.empty:
         return jsonify({"ok": True, "summary": "No variants available yet.", "viz": {}})
+
+    # Coerce numeric columns exactly like your pipeline does
+    for col in ("generation", "activity_score_log2", "mutation_count", "dna_yield", "protein_yield"):
+        if col in variants_df.columns:
+            variants_df[col] = pd.to_numeric(variants_df[col], errors="coerce")
+
+    # Robust fallback: some pipelines store activity on Variant.activity_score only.
+    if "activity_score_log2" not in variants_df.columns and "activity_score" in variants_df.columns:
+        variants_df["activity_score_log2"] = pd.to_numeric(variants_df["activity_score"], errors="coerce")
+    elif "activity_score_log2" in variants_df.columns and "activity_score" in variants_df.columns:
+        variants_df["activity_score_log2"] = variants_df["activity_score_log2"].fillna(
+            pd.to_numeric(variants_df["activity_score"], errors="coerce")
+        )
 
     try:
         mutations_df = get_mutations(experiment_id)
+        if mutations_df is None:
+            mutations_df = pd.DataFrame()
     except Exception:
         mutations_df = pd.DataFrame()
 
-    has_scores = (
-        "activity_score_log2" in variants_df.columns
-        and variants_df["activity_score_log2"].notna().any()
-    )
+    if not mutations_df.empty:
+        for col in ("generation", "position"):
+            if col in mutations_df.columns:
+                mutations_df[col] = pd.to_numeric(mutations_df[col], errors="coerce")
 
-    generations = sorted(
-        pd.to_numeric(variants_df["generation"], errors="coerce")
-        .dropna()
-        .astype(int)
-        .unique()
-        .tolist()
-    )
+    score_col = "activity_score_log2"
+    has_scores = score_col in variants_df.columns and variants_df[score_col].notna().any()
+    score_n = int(variants_df[score_col].notna().sum()) if score_col in variants_df.columns else 0
+
+    # Generations list (safe even if generation has NaNs)
+    generations = []
+    if "generation" in variants_df.columns:
+        generations = sorted(
+            variants_df["generation"]
+            .dropna()
+            .astype(int)
+            .unique()
+            .tolist()
+        )
 
     summary = (
         f"Experiment: {getattr(exp, 'experiment_name', None)}\n"
         f"Variants: {len(variants_df)}\n"
         f"Mutations: {len(mutations_df)}\n"
+        f"Variants with activity score: {score_n}\n"
         f"Generations: {generations}"
     )
 
@@ -225,6 +248,7 @@ def api_render_report():
     try:
         top10_df = compute_top10(variants_df)
         selected_variant_id = int(top10_df.iloc[0]["variant_id"]) if not top10_df.empty else None
+
         viz1 = top10_df.to_html(
             index=False,
             classes="table table-sm table-striped table-bordered align-middle",
@@ -236,20 +260,34 @@ def api_render_report():
 
     # ---- 2) Activity score plot ----
     try:
-        viz2 = _fig_to_embed(plot_activity_violin(variants_df)) if has_scores else "<p class='text-muted'>No activity scores yet.</p>"
+        viz2 = (
+            _fig_to_payload(plot_activity_violin(variants_df, score_col=score_col))
+            if has_scores
+            else "<p class='text-muted'>No activity scores yet.</p>"
+        )
     except Exception as e:
         viz2 = f"<p class='text-danger'>Activity plot failed: {e}</p>"
 
     # ---- 3) Trends ----
     try:
-        viz3 = _fig_to_embed(plot_activity_median_trend(variants_df)) if has_scores else "<p class='text-muted'>No trend data yet.</p>"
+        viz3 = (
+            _fig_to_payload(plot_activity_median_trend(variants_df, score_col=score_col, show_iqr=True))
+            if has_scores
+            else "<p class='text-muted'>No trend data yet.</p>"
+        )
     except Exception as e:
         viz3 = f"<p class='text-danger'>Trends failed: {e}</p>"
 
     # ---- 4) Mutation fingerprint ----
     try:
         if selected_variant_id and not mutations_df.empty:
-            viz4 = _fig_to_embed(plot_mutation_fingerprint(mutations_df, selected_variant_id))
+            viz4 = _fig_to_payload(
+                plot_mutation_fingerprint(
+                    mutations_df,
+                    variant_id=selected_variant_id,
+                    title=f"Mutation fingerprint (variant {selected_variant_id})",
+                )
+            )
         else:
             viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
     except Exception as e:
@@ -258,7 +296,14 @@ def api_render_report():
     # ---- 5) Activity landscape ----
     try:
         if has_scores and not mutations_df.empty:
-            viz5 = _fig_to_embed(plot_activity_landscape_3d(variants_df, mutations_df))
+            viz5 = _fig_to_payload(
+                plot_activity_landscape_3d(
+                    variants_df,
+                    mutations_df,
+                    score_col=score_col,
+                    title="3D Activity Landscape (PCA on mutation positions)",
+                )
+            )
         else:
             viz5 = "<p class='text-muted'>No landscape data available.</p>"
     except Exception as e:
