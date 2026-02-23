@@ -25,18 +25,6 @@ def api_uniprot():
         if not accession:
             return jsonify({"ok": False, "error": "Please enter a UniProt accession."}), 400
 
-        # 0) Ensure the user exists (FK: Experiment.user_id -> User.user_id)
-        u = User.query.get(user_id)
-        if not u:
-            u = User(
-                user_id=user_id,
-                email="guest@example.com",
-                password_hash="guest",
-                created_at=datetime.utcnow(),
-            )
-            db.session.add(u)
-            db.session.commit()
-
         # 1) Fetch UniProt
         data = fetch_uniprot(accession)
 
