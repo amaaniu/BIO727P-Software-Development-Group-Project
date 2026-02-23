@@ -4,8 +4,6 @@ from app.models import db, Experiment, Variant, Mutations, Activity, ControlData
 from datetime import datetime
 import json
 
-from app.analysis.backend_analysis import analyse_variant
-
 def insert_experiment_records(records, user_id):
     """
     Insert experiment records into database.
@@ -111,75 +109,25 @@ def update_experiment_plasmid(experiment_id, plasmid_sequence, status=None):
     return experiment
 
 def insert_variant_records(records, experiment_id):
-    """
-    Insert variant records into database.
-    
-    Args:
-        records: List of variant dicts from file_processor
-        experiment_id: ID of experiment these variants belong to
-        
-    Returns:
-        List of created Variant objects with variant_id populated
-    """
     variant_objects = []
 
-    experiment = Experiment.query.get(experiment_id)
-    if not experiment or not experiment.plasmid_sequence:
-        raise ValueError("WT plasmid_sequence missing for this experiment.")
-    wt_plasmid_sequence = experiment.plasmid_sequence
-    
     for record in records:
-        analysis = analyse_variant(
-            wt_plasmid_sequence=wt_plasmid_sequence,
-            variant_plasmid_sequence=record["dna_sequence"],
-            generation=int(record["generation"]),
-            dna_yield=float(record["dna_yield"]),
-            protein_yield=float(record["protein_yield"]),
-            wt_dna_yield=float(record["dna_yield"]),          
-            wt_protein_yield=float(record["protein_yield"]),  
-)
-
-        mutation_result = analysis["mutations"]
-        activity_result = analysis["activity"]
-
-        protein_sequence = analysis["variant"]["protein"]
-        mutation_count = mutation_result["mutation_count"]
-        activity_score =(
-            activity_result["activity_score_log2"] 
-            if activity_result else None
-        )
-        
         variant = Variant(
             experiment_id=experiment_id,
-            generation=record['generation'],
-            plasmid_variant_index=record['plasmid_variant_index'],
-            parent_variant_id=None,  
-            dna_sequence=record['dna_sequence'],
-            protein_sequence=record.get('protein_sequence'),
-            protein_yield=record['protein_yield'],
-            dna_yield=record['dna_yield'],
-            activity_score=record.get('activity_score'),
-            mutation_count=record.get('mutation_count'),
+            generation=int(record["generation"]),
+            plasmid_variant_index=str(record["plasmid_variant_index"]),
+            parent_variant_id=record.get("parent_variant_id"),
+            dna_sequence=record["dna_sequence"],
+            protein_sequence=record.get("protein_sequence"),  # optional if TSV has it
+            protein_yield=float(record["protein_yield"]),
+            dna_yield=float(record["dna_yield"]),
+            activity_score=record.get("activity_score"),      # likely None at upload time
+            mutation_count=record.get("mutation_count"),      # likely None at upload time
             created_at=datetime.utcnow(),
-            custom_metadata=None  
+            custom_metadata=None,
         )
-        
         db.session.add(variant)
-        db.session.flush()
-
-        for m in mutation_result["mutation_records"]:
-            db.session.add
-            (Mutations(
-                variant_id=variant.variant_id,
-                position=m["position"],
-                wt_residue=m["wt_residue"],
-                mutant_residue=m["mutant_residue"],
-                mutation_type=m["mutation_type"],
-                generation=m["generation"],
-                codon_change=m.get("codon_change"),
-        ))
-
-    variant_objects.append(variant)
+        variant_objects.append(variant)
 
     db.session.commit()
     return variant_objects
@@ -261,10 +209,10 @@ def insert_control_records(records, experiment_id):
     for record in records:
         control = ControlData(
             experiment_id=experiment_id,
-            generation=record['generation'],
+            generation=int(record['generation']),
             control_type=record['control_type'],
-            protein_yield=record['protein_yield'],
-            dna_yield=record['dna_yield']
+            protein_yield=float(record['protein_yield']),
+            dna_yield=float(record['dna_yield'])
         )
         
         db.session.add(control)
@@ -372,3 +320,28 @@ def process_and_insert(file, experiment_id=None, user_id=None):
         db.session.rollback()
         raise Exception(f"Database insertion failed: {str(e)}")
     
+def store_analysis_results(variant: Variant, analysis: dict) -> int:
+    """
+    Updates variant + replaces mutations. Returns number of mutations inserted.
+    """
+    variant.protein_sequence = analysis["variant"]["protein"]
+    variant.mutation_count = analysis["mutations"]["mutation_count"]
+    activity = analysis.get("activity")
+    variant.activity_score = activity.get("activity_score_log2") if activity else None
+
+    Mutations.query.filter_by(variant_id=variant.variant_id).delete()
+
+    count = 0
+    for m in analysis["mutations"]["mutation_records"]:
+        db.session.add(Mutations(
+            variant_id=variant.variant_id,
+            position=int(m["position"]),
+            wt_residue=m["wt_residue"],
+            mutant_residue=m["mutant_residue"],
+            mutation_type=m["mutation_type"],
+            generation=int(m["generation"]),
+            codon_change=m.get("codon_change"),
+        ))
+        count += 1
+
+    return count

@@ -6,6 +6,8 @@ from app.uploads.orf_translation import CODON_TABLE
 
 def _translate_codon(codon: str) -> str:
     codon = codon.upper().replace("U", "T")
+    if len(codon) != 3:
+        return "X"
     return CODON_TABLE.get(codon, "X")
 
 
@@ -26,6 +28,9 @@ def classify_mutations_cds(
         raise ValueError("WT CDS empty")
     if not var:
         raise ValueError("Variant CDS empty")
+    
+    if len(wt) % 3 != 0 or len(var) % 3 != 0:
+        raise ValueError("CDS length not divisible by 3 (wrong ORF or frameshift).")
 
     n_codons = min(len(wt), len(var)) // 3
 
@@ -76,5 +81,8 @@ def classify_mutations_cds(
         "mutation_records": mutation_records,
         "syn_count": syn_count,
         "nonsyn_count": nonsyn_count,
-        "mutation_count": len(mutation_records)
+        "mutation_count": len(mutation_records),
+        "stop_gained": stop_gained,
+        "stop_lost": stop_lost,
+
     }

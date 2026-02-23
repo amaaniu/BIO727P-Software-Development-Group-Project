@@ -1,21 +1,10 @@
 """
-
 Goal:
 Given a plasmid DNA sequence, identify the recombinant gene, then transcribe + translate to get the corresponding protein sequence.
-
-What this does:
-1) Validate DNA
-2) Treat as circular DNA (ORFs that wrap around origin)
-3) Scan 6 reading frames for ORFs (ATG ... STOP)
-4) Translate ORFs to protein sequences
-5) Pick the "best" ORF (e.g., longest ORF)
-6) Provide transcript (mRNA) + protein sequence for the chosen ORF
-
 """
 
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, Tuple
-
 
 # Genetic code
 CODON_TABLE = {
@@ -102,16 +91,22 @@ def _orf_endpoints_in_seq(dna, frame):
     """
     out = []
     i = frame
-    while i <= len(dna) - 3:
+    L = len(dna)
+    while i <= L - 3:
         if dna[i:i+3] == "ATG":
-            j = i
-            while j <= len(dna) - 3:
+            j = i + 3
+            while j <= L - 3:
                 codon = dna[j:j+3]
                 if codon in STOP_CODONS:
-                    out.append((i, j))  # stop excluded
+                    out.append((i, j))  
+                    i = j + 3            
                     break
                 j += 3
-            # continue scanning after this start (keeps your original behaviour)
+            else:
+                # no stop found; move on one codon
+                i += 3
+                continue
+            continue
         i += 3
     return out
 
