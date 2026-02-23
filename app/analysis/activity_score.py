@@ -1,42 +1,30 @@
 from __future__ import annotations
 import math
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Mapping, Tuple
 
-
-def compute_activity_score_raw(
-    dna_yield: float,
-    protein_yield: float,
-    wt_dna_yield: float,
-    wt_protein_yield: float
-) -> Optional[Dict[str, Any]]:
+def _get_wt_for_generation(
+    generation: int,
+    wt_by_generation: Mapping[int, Tuple[float, float]],
+) -> Optional[Tuple[float, float]]:
     """
-    Compute activity score using database-aligned variable names.
+    Baseline rule:
+      - Gen 1 uses Gen 1 WT
+      - Gen g (g>=2) uses Gen (g-1) WT
     """
-
-    if dna_yield is None or protein_yield is None:
+    if generation is None:
         return None
 
-    if wt_dna_yield is None or wt_protein_yield is None:
+    try:
+        g = int(generation)
+    except (TypeError, ValueError):
         return None
 
-    if wt_dna_yield == 0 or wt_protein_yield == 0:
+    if g <= 0:
         return None
 
-    dna_norm = dna_yield / wt_dna_yield
+    baseline_generation = 1 if g == 1 else (g - 1)
 
-    protein_norm = protein_yield / wt_protein_yield
-
-    if protein_norm == 0:
-        return None
-
-    activity_score_raw = dna_norm / protein_norm
-
-    return {
-        "dna_norm": dna_norm,
-        "protein_norm": protein_norm,
-        "activity_score_raw": activity_score_raw,
-    }
-
+    return wt_by_generation.get(baseline_generation)
 
 def compute_activity_score_log2(
     dna_yield: float,
@@ -45,37 +33,51 @@ def compute_activity_score_log2(
     wt_protein_yield: float
 ) -> Optional[Dict[str, Any]]:
     """
-    Compute raw and log2 activity scores using DB-aligned variable names.
+    Compute log2 activity scores only.
     """
-
-    result = compute_activity_score_raw(
-        dna_yield,
-        protein_yield,
-        wt_dna_yield,
-        wt_protein_yield
-    )
-
-    if result is None:
+    if dna_yield is None or protein_yield is None:
+            return None
+    
+    if wt_dna_yield is None or wt_protein_yield is None:
         return None
 
-    raw = result["activity_score_raw"]
+    if wt_dna_yield == 0 or wt_protein_yield == 0:
+        return None
 
-    result["activity_score_log2"] = (
-        math.log2(raw) if raw > 0 else None
-    )
+    dna_norm = dna_yield / wt_dna_yield
+    protein_norm = protein_yield / wt_protein_yield
 
-    return result
+    if protein_norm == 0:
+        return None
+
+    ratio = dna_norm / protein_norm
+
+    if ratio <= 0:
+        return None
+
+    return {
+        "dna_norm": dna_norm,
+        "protein_norm": protein_norm,
+        "activity_score_log2": math.log2(ratio),
+    }
 
 
 def compute_activity_scores(
     dna_yield: float,
     protein_yield: float,
-    wt_dna_yield: float,
-    wt_protein_yield: float
+    generation: int,
+    wt_by_generation: Mapping[int, Tuple[float, float]]
 ) -> Optional[Dict[str, Any]]:
     """
-    Main function to call from database pipeline.
+    Automatically selects correct WT baseline based on generation.
     """
+
+    wt_values = _get_wt_for_generation(generation, wt_by_generation)
+
+    if wt_values is None:
+        return None
+
+    wt_dna_yield, wt_protein_yield = wt_values
 
     return compute_activity_score_log2(
         dna_yield,
