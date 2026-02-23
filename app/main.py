@@ -32,7 +32,7 @@ def documentation():
 # Creates the route for the tutorial page
 @main_bp.route('/tutorial')
 def tutorial():
-    """Renders the tutorial page."""
+    return render_template('tutorial.html')
 
 
 @main_bp.route('/tutorial/docs')
