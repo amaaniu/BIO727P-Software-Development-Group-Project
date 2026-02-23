@@ -6,7 +6,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
-
+from app.visualisations.data_source2 import get_variants, get_mutations
 
 def _build_mutation_feature_matrix(mutations_df: pd.DataFrame) -> pd.DataFrame:
     # turns mutation positions into a wide binary matrix: one column per position
