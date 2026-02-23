@@ -1,4 +1,4 @@
-# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
+# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
 from pathlib import Path
 from flask import Blueprint, render_template, request, abort, current_app, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
@@ -29,8 +29,7 @@ def documentation():
 
     return 'soon rendering template documentation'
 
-# Creates the route for the tutorial page
-@main_bp.route('/tutorial')
+# Creates the route for the tutorial page and the tutorial documentation sub-routes made using MkDocs. The tutorial_docs route serves the built MkDocs documentation. 
 def tutorial():
     return render_template('tutorial.html')
 

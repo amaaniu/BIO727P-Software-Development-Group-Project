@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 auth_bp = Blueprint('auth', __name__)
 
-# Creates the route for the registration page
+# Creates the route for the registration page and handles user registration.
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """Renders the registration page and handles user registration."""
@@ -56,7 +56,7 @@ def register():
         
     return render_template('register.html')
 
-# Creates the route for the login page
+# Creates the route for the login page and handles user login.
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Renders the login page and handles user login."""
@@ -83,7 +83,7 @@ def login():
     return render_template('login.html')
 
 
-# Creates the route for the logout functionality
+# Creates the route for the logout functionality.
 @auth_bp.route('/logout', methods=['POST'])
 @login_required
 def logout():

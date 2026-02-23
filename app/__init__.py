@@ -8,7 +8,12 @@ db = SQLAlchemy()  # Create an instance of SQLAlchemy to be used for database in
 login_manager = LoginManager()  # Create an instance of LoginManager to handle user authentication and session management
 
 def create_app():
-    """Creates and configures the Flask applicationfrom all of the registered blueprints."""
+    """
+    Creates and configures the Flask applicationfrom all of the registered blueprints. 
+    It sets up the database, initialises Flask-Login, and creates the necessary database table. 
+    The function returns the configured Flask application instance, which is run to start the web application.
+
+    """
     app = Flask(__name__, instance_relative_config=True)  # Create a Flask application instance with relative configuration
     os.makedirs(app.instance_path, exist_ok=True)  # Ensure the instance folder exists for storing the database file
     db_path = os.path.join(app.instance_path, 'app.db')  # Define the
@@ -32,7 +37,6 @@ def create_app():
     from .auth import auth_bp
     from .upload import upload_bp 
     from .report import report_bp
-
 
     app.register_blueprint(main_bp)  # Register the main blueprint with a URL prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the auth blueprint with a URL prefix for authentication routes
