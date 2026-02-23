@@ -16,7 +16,7 @@ def create_app():
     """
     app = Flask(__name__, instance_relative_config=True)  # Create a Flask application instance with relative configuration
     os.makedirs(app.instance_path, exist_ok=True)  # Ensure the instance folder exists for storing the database file
-    db_path = os.path.join(app.instance_path, 'app.db')  # Define the
+    db_path = os.path.join(app.instance_path, 'app.db')  # Define the path for the SQLite database file within the instance folder
     
     app.config['SECRET_KEY'] = 'dev-key' # In production, use an actual secret key for security purposes.
     # Set up the database path and URI for SQLAlchemy. The database file will be created in the instance folder of the application.

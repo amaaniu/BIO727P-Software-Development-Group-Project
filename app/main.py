@@ -30,7 +30,9 @@ def documentation():
     return 'soon rendering template documentation'
 
 # Creates the route for the tutorial page and the tutorial documentation sub-routes made using MkDocs. The tutorial_docs route serves the built MkDocs documentation. 
+@main_bp.route('/tutorial')
 def tutorial():
+    """Renders the tutorial page."""
     return render_template('tutorial.html')
 
 
