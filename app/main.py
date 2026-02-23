@@ -1,6 +1,6 @@
 # This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, documentation page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
 from pathlib import Path
-from flask import Blueprint, render_template, request, abort, current_app, send_from_directory
+from flask import Blueprint, render_template, request, abort, current_app, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
 from . import db
@@ -36,6 +36,12 @@ def tutorial():
     return render_template('tutorial.html')
 
 
+@main_bp.route('/tutorial/docs')
+def tutorial_docs_root():
+    """Normalizes docs root URL to include trailing slash."""
+    return redirect(url_for('main.tutorial_docs', doc_path='index.html'))
+
+
 @main_bp.route('/tutorial/docs/')
 @main_bp.route('/tutorial/docs/<path:doc_path>')
 def tutorial_docs(doc_path='index.html'):
@@ -43,6 +49,13 @@ def tutorial_docs(doc_path='index.html'):
     docs_dir = Path(current_app.root_path).parent / 'site'
     if not docs_dir.exists():
         abort(404, description='Documentation is not built yet. Run "mkdocs build".')
+
+    doc_path = (doc_path or 'index.html').lstrip('/')
+    if doc_path.endswith('/'):
+        doc_path = f'{doc_path}index.html'
+    elif '.' not in Path(doc_path).name:
+        doc_path = f'{doc_path}/index.html'
+
     return send_from_directory(docs_dir, doc_path)
 
 # Creates the route for the staging page, which is only accessible to authenticated users.

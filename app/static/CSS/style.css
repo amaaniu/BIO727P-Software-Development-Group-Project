@@ -451,3 +451,23 @@ main {
 footer {
     flex-shrink: 0;
 }
+
+.tutorial-shell {
+  background: transparent;
+  overflow: hidden;
+}
+
+.tutorial-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 120px);
+  min-height: 720px;
+  border: 0;
+}
+
+@media (max-width: 992px) {
+  .tutorial-frame {
+    height: calc(100vh - 110px);
+    min-height: 640px;
+  }
+}

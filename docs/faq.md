@@ -12,7 +12,7 @@ Yes. The portal uses the UniProt accession to fetch and validate against the wil
 
 Yes. Upload plasmid FASTA encoding the variants from your DE run so sequence-level checks and downstream tracking can be performed.
 
-## What does the Activity Metric represent?
+## What does the Activity Score represent?
 
 It is a composite score used to compare variants based on analysis components defined in `Data Analysis`.
 # The full formula and logic are intentionally kept as a template until the final implementation details are available.
