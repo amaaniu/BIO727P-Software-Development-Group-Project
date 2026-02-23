@@ -83,14 +83,34 @@ def load_mutations_from_json(path: str | Path) -> pd.DataFrame:
     return df
 
 
-def get_variants(variants_json_path: str | Path) -> pd.DataFrame:
-    """Public entry point to get variants dataframe from exported JSON."""
-    return load_variants_from_json(variants_json_path)
+def get_variants(source: str | Path | int) -> pd.DataFrame:
+    """
+    Public entry point to get variants dataframe.
+
+    Parameters
+    ----------
+    source:
+        Either a JSON path (str/Path) or an experiment_id (int).
+    """
+    if isinstance(source, int):
+        rows = fetch_variant_summary(source)
+        return pd.DataFrame(rows)
+    return load_variants_from_json(source)
 
 
-def get_mutations(mutations_json_path: str | Path) -> pd.DataFrame:
-    """Public entry point to get mutations dataframe from exported JSON."""
-    return load_mutations_from_json(mutations_json_path)
+def get_mutations(source: str | Path | int) -> pd.DataFrame:
+    """
+    Public entry point to get mutations dataframe.
+
+    Parameters
+    ----------
+    source:
+        Either a JSON path (str/Path) or an experiment_id (int).
+    """
+    if isinstance(source, int):
+        rows = fetch_mutations_table(source)
+        return pd.DataFrame(rows)
+    return load_mutations_from_json(source)
 
 
 # =============================================================================
@@ -130,11 +150,14 @@ def fetch_variant_summary(experiment_id: int) -> List[Dict[str, Any]]:
         If called outside backend environment (models/db not available).
     """
     try:
-        from models import ControlData, Variant  # type: ignore
-    except Exception as e:
-        raise ImportError(
-            "fetch_variant_summary() must be run in the backend environment where 'models' is available."
-        ) from e
+        from app.models import ControlData, Variant  # type: ignore
+    except Exception:
+        try:
+            from models import ControlData, Variant  # type: ignore
+        except Exception as e:
+            raise ImportError(
+                "fetch_variant_summary() must be run in the backend environment where models are available."
+            ) from e
 
     controls = ControlData.query.filter_by(experiment_id=experiment_id).all()
 
@@ -211,11 +234,14 @@ def fetch_mutations_table(experiment_id: int) -> List[Dict[str, Any]]:
         If called outside backend environment (models/db not available).
     """
     try:
-        from models import Mutations, Variant, db  # type: ignore
-    except Exception as e:
-        raise ImportError(
-            "fetch_mutations_table() must be run in the backend environment where 'models' is available."
-        ) from e
+        from app.models import Mutations, Variant, db  # type: ignore
+    except Exception:
+        try:
+            from models import Mutations, Variant, db  # type: ignore
+        except Exception as e:
+            raise ImportError(
+                "fetch_mutations_table() must be run in the backend environment where models are available."
+            ) from e
 
     q = (
         db.session.query(
