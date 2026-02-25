@@ -333,6 +333,28 @@ body:not(.home-page) .card:hover {
   box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
 }
 
+/* Home page button refinements */
+.home-page .home-cta-btn {
+  min-width: 140px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(26, 107, 127, 0.22);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.home-page .home-cta-btn:hover,
+.home-page .home-cta-btn:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(26, 107, 127, 0.24);
+}
+
+.home-page .home-features-btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+}
+
 /* Dashboard table */
 .dashboard-table {
   table-layout: fixed;

@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import current_user, login_required
 
-from app.models import Experiment, UniProtData, UniProtFeature, User, db
+from app.models import Experiment, UniProtData, UniProtFeature, db
 from app.db_operations import process_and_insert, update_experiment_plasmid
 from app.uploads.file_handling import process_file
 from app.uploads.orf_translation import six_frame_orfs
@@ -11,12 +12,14 @@ from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta
 upload_bp = Blueprint("upload", __name__)
 
 @upload_bp.route("/", methods=["GET"])
+@login_required
 def staging_page():
     return render_template("staging.html")
 
 @upload_bp.route("/api/uniprot", methods=["POST"])
+@login_required
 def api_uniprot():
-    user_id = session.get("user_id", 1)  # guest fallback
+    user_id = current_user.user_id
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -55,7 +58,7 @@ def api_uniprot():
         exp_name = (payload.get("experiment_name") or "Untitled experiment").strip()
 
         experiment = Experiment(
-            user_id=user_id,
+            user_id=current_user.user_id,
             experiment_name=exp_name,
             uniprot_id=data["uniprot_id"],
             wt_protein_sequence=data["protein_sequence"],
@@ -84,6 +87,7 @@ def api_uniprot():
 
 
 @upload_bp.route("/api/validate-fasta", methods=["POST"])
+@login_required
 def api_validate_fasta():
     try:
         if "fastaFile" not in request.files:
@@ -94,9 +98,12 @@ def api_validate_fasta():
             return jsonify({"ok": False, "error": "Missing experiment_id."}), 400
         experiment_id = int(experiment_id)
 
-        experiment = Experiment.query.get(experiment_id)
+        experiment = Experiment.query.filter_by(
+            experiment_id=experiment_id,
+            user_id=current_user.user_id
+        ).first()
         if not experiment:
-            return jsonify({"ok": False, "error": "Experiment not found."}), 404
+            return jsonify({"ok": False, "error": "Experiment not found for current user."}), 404
         
         wt_sequence = (experiment.wt_protein_sequence or "").strip()
         if not wt_sequence:
@@ -113,8 +120,9 @@ def api_validate_fasta():
 
         update_experiment_plasmid(
             experiment_id=experiment_id,
+            user_id=current_user.user_id,
             plasmid_sequence=dna_seq,
-            status="plasmid_uploaded"
+            status="plasmid_uploaded",
         )
         
         return jsonify({
@@ -130,8 +138,9 @@ def api_validate_fasta():
 
 
 @upload_bp.route("/api/upload-data", methods=["POST"])
+@login_required
 def api_upload_data():
-    user_id = session.get("user_id", 1)  # TEMP: avoid session KeyError
+    user_id = current_user.user_id
 
     try:
         if "dataFile" not in request.files:
@@ -149,6 +158,9 @@ def api_upload_data():
         experiment_id = request.form.get("experiment_id")
         if experiment_id:
             experiment_id = int(experiment_id)
+            experiment = Experiment.query.get(experiment_id)
+            if not experiment or experiment.user_id != current_user.user_id:
+                return jsonify({"ok": False, "error": "Experiment not found for current user."}), 404
 
         # 3) If uploading non-experiment data without an experiment_id, create a placeholder Experiment
         if data_type != "experiment" and not experiment_id:
@@ -159,7 +171,7 @@ def api_upload_data():
         result = process_and_insert(
             file,
             experiment_id=experiment_id,
-            user_id=user_id
+            user_id=current_user.user_id
         )
 
         return jsonify({

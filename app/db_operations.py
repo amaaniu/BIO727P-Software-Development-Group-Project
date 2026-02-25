@@ -84,7 +84,7 @@ def insert_uniprot_feature_records(records, uniprot_id):
     db.session.commit()
     return feature_objects
 
-def update_experiment_plasmid(experiment_id, plasmid_sequence, status=None):
+def update_experiment_plasmid(experiment_id, plasmid_sequence, user_id, status=None):
     """
     Update plasmid sequence for an experiment.
 
@@ -95,7 +95,7 @@ def update_experiment_plasmid(experiment_id, plasmid_sequence, status=None):
     Returns:
         Updated Experiment object
     """
-    experiment = Experiment.query.get(experiment_id)
+    experiment = Experiment.query.filter_by(experiment_id=experiment_id, user_id=user_id).first()
 
     if not experiment:
         raise ValueError("Experiment not found")

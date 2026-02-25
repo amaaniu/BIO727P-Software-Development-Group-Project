@@ -9,10 +9,14 @@
     <h1 class="h1 fw-bold mb-2">
       Directed Evolution Monitoring & Analytics
     </h1>
-    <h5 class="text-muted mb-0">
+    <h5 class="text-muted mb-3">
       Provides monitoring and analytics tools for researchers participating in directed evolution experiments, for faster and more informed decision-making.
       Track evolutionary trajectories, variant libraries, and mutations across cycles. Free access for all.
     </h5>
+    <div class="d-flex flex-wrap justify-content-center gap-3">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 home-cta-btn" role="button" aria-pressed="true">Register</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4 home-cta-btn" role="button" aria-pressed="true">Login</a>
+    </div>
   </div>
 </div>
 
@@ -20,7 +24,7 @@
   <section class="container-fluid my-3">
     <div class="text-center">
       <span class="section-badge section-badge-accent">Platform Features</span>
-      <h4>Upload your experimental data in JSON or TSV format and use the following features to analyse your results:</h4>
+      <h4>Core highlights for rapid analysis. For full details, visit the features page.</h4>
     </div>
     <div class="row g-4 m-2">
       <div class="col-md-6 col-lg-4">
@@ -51,42 +55,6 @@
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body p-4">
             <div class="feature-icon">
-              <i class="bi bi-bar-chart-steps h1 text-primary"></i>
-            </div>
-            <h5 class="fw-bold">Performance Comparison</h5>
-            <p class="card-text mb-0">Compare activity performance across different generations</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="feature-icon">
-              <i class="bi bi-table h1 text-primary"></i>
-            </div>
-            <h5 class="fw-bold">Variant Table</h5>
-            <p class="card-text mb-0">Highlights the top performing variants of each polymerase.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="feature-icon">
-              <i class="bi bi-clipboard-data h1 text-primary"></i>
-            </div>
-            <h5 class="fw-bold">Mutation Tracking</h5>
-            <p class="card-text mb-0">Track mutations over generations of your directed evolution experiments.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="feature-icon">
               <i class="bi bi-file-earmark-bar-graph h1 text-primary"></i>
             </div>
             <h5 class="fw-bold">Comprehensive Reports</h5>
@@ -94,6 +62,9 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="text-center mt-3">
+      <a href="{{ url_for('main.features') }}" class="btn btn-primary home-features-btn">See all features</a>
     </div>
   </section>
 
@@ -149,12 +120,9 @@
         </div>
       </div>
     </div>
+    <div class="text-center mt-3">
+      <a href="{{ url_for('main.tutorial') }}" class="btn btn-primary home-features-btn">Open user guide</a>
+    </div>
   </section>
-
-  <div class="container-fluid my-3 text-center">
-    <h4>To get started, please register for an account or log in if you already have an account.</h4>
-    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg m-3" role="button" aria-pressed="true">Register</a>
-    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg m-3" role="button" aria-pressed="true">Login</a>
-  </div>
 </div>
 {% endblock %}

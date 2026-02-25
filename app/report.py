@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 from flask import Blueprint, jsonify, render_template, abort, request
+from flask_login import current_user, login_required
 import pandas as pd
 
 # DB models
@@ -41,14 +42,19 @@ report_bp = Blueprint("report", __name__)
 
 
 @report_bp.route("/<int:experiment_id>", methods=["GET"])
+@login_required
 def report_page(experiment_id: int):
-    exp = Experiment.query.get(experiment_id)
+    exp = Experiment.query.filter_by(
+        experiment_id=experiment_id,
+        user_id=current_user.user_id
+    ).first()
     if not exp:
         abort(404, description="Experiment not found")
     return render_template("report.html", experiment_id=experiment_id)
 
 
 @report_bp.route("/api/run-analysis", methods=["POST"])
+@login_required
 def api_run_analysis():
     payload = request.get_json(silent=True) or {}
     experiment_id = payload.get("experiment_id")
@@ -56,7 +62,10 @@ def api_run_analysis():
     if not experiment_id:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
 
-    exp = Experiment.query.get(int(experiment_id))
+    exp = Experiment.query.filter_by(
+        experiment_id=int(experiment_id),
+        user_id=current_user.user_id
+    ).first()
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
@@ -146,10 +155,18 @@ def api_run_analysis():
         return jsonify({"ok": False, "error": str(e)}), 400
 
 @report_bp.route("/api/summary", methods=["GET"])
+@login_required
 def api_summary():
     experiment_id = request.args.get("experiment_id", type=int)
-    if not experiment_id:
+    if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
+    
+    exp = Experiment.query.filter_by(
+        experiment_id=experiment_id,
+        user_id=current_user.user_id
+    ).first()
+    if not exp:
+        return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
     variants = (Variant.query
                 .filter_by(experiment_id=experiment_id)
@@ -182,12 +199,16 @@ def _fig_to_payload(fig):
     return {"type": "plotly", "figure": json.loads(fig.to_json())}
 
 @report_bp.route("/api/render-report", methods=["GET"])
+@login_required
 def api_render_report():
     experiment_id = request.args.get("experiment_id", type=int)
-    if not experiment_id:
+    if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
 
-    exp = Experiment.query.get(experiment_id)
+    exp = Experiment.query.filter_by(
+        experiment_id=experiment_id,
+        user_id=current_user.user_id
+    ).first()
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
