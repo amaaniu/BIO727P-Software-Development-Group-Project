@@ -142,6 +142,10 @@ def dashboard():
     # 5. Executes the query and processes the results to determine the status of each experiment based on its raw status and variant count. 
     all_experiments = []
     for row in db.session.execute(experiments_query):
+
+        if not row.experiment_id: 
+            continue
+
         raw_status = (row.status or '').strip().lower()
         variant_total = int(row.variant_count or 0)
         if raw_status in ('completed', 'complete', 'done'):
@@ -149,7 +153,7 @@ def dashboard():
         else:
             status = 'In Progress'
             
-        # Structure the experiment data for rendering in the dashboard template, including the experiment ID, name, UniProt ID, determined status, maximum generation number, total variant count, and last updated timestamp.
+        # Structures the experiment data for rendering in the dashboard template, including the experiment ID, name, UniProt ID, determined status, maximum generation number, total variant count, and last updated timestamp.
         all_experiments.append({
             'experiment_id': row.experiment_id,
             'experiment_name': row.experiment_name,
