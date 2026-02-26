@@ -352,8 +352,7 @@ def process_variant_data(df):
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
             failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
             if not failed.empty:
-                bad_vals = failed.head(3).tolist()
-                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
+                raise ValueError(f"Column '{col}' contains non-numeric values.")
 
     for col in numeric_float:
         if col in df.columns:
@@ -361,8 +360,7 @@ def process_variant_data(df):
             df[col] = pd.to_numeric(df[col], errors='coerce')
             failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
             if not failed.empty:
-                bad_vals = failed.head(3).tolist()
-                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected numeric values.")
+                raise ValueError(f"Column '{col}' contains non-numeric values.")
 
     df = df[VARIANT_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -402,8 +400,7 @@ def process_mutation_data(df):
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
             failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
             if not failed.empty:
-                bad_vals = failed.head(3).tolist()
-                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
+                raise ValueError(f"Column '{col}' contains non-numeric values.")
 
     df = df[MUTATION_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -441,8 +438,7 @@ def process_activity_data(df):
         df['raw_value'] = pd.to_numeric(df['raw_value'], errors='coerce')
         failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
         if not failed.empty:
-            bad_vals = failed.head(3).tolist()
-            raise ValueError(f"Column 'raw_value' contains non-numeric values: {bad_vals}. Expected numeric values.")
+            raise ValueError(f"Column 'raw_value' contains non-numeric values.")
 
     df = df[ACTIVITY_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
@@ -484,8 +480,7 @@ def process_control_data(df):
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
             failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
             if not failed.empty:
-                bad_vals = failed.head(3).tolist()
-                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected integer values.")
+                raise ValueError(f"Column '{col}' contains non-numeric values.")
 
     for col in numeric_float:
         if col in df.columns:
@@ -493,8 +488,7 @@ def process_control_data(df):
             df[col] = pd.to_numeric(df[col], errors='coerce')
             failed = original_non_null[pd.to_numeric(original_non_null, errors='coerce').isna()]
             if not failed.empty:
-                bad_vals = failed.head(3).tolist()
-                raise ValueError(f"Column '{col}' contains non-numeric values: {bad_vals}. Expected numeric values.")
+                raise ValueError(f"Column '{col}' contains non-numeric values.")
 
     df = df[CONTROL_FIELDS].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
