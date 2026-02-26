@@ -89,6 +89,7 @@ class UniProtData(db.Model):
 
     uniprot_id = db.Column(db.Text, primary_key=True)
     protein_name = db.Column(db.Text)
+    organism_name = db.Column(db.Text)
     protein_length = db.Column(db.Integer, nullable=False)
     protein_sequence = db.Column(db.Text, nullable=False)
 

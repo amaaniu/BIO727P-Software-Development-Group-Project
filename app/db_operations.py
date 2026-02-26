@@ -47,6 +47,7 @@ def insert_uniprot_records(records):
     uniprot = UniProtData(
         uniprot_id=records['uniprot_id'],
         protein_name=records.get('protein_name'),
+        organism_name=records.get('organism_name'),
         protein_length=records['protein_length'],
         protein_sequence=records['protein_sequence']
     )

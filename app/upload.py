@@ -7,7 +7,13 @@ from app.models import Experiment, UniProtData, UniProtFeature, db
 from app.db_operations import process_and_insert, update_experiment_plasmid
 from app.uploads.file_handling import process_file
 from app.uploads.orf_translation import six_frame_orfs
-from app.uploads.staging import fetch_uniprot, match_wt_exact, parse_fasta
+from app.uploads.staging import (
+    alphafold_entry_url,
+    fetch_alphafold_prediction,
+    fetch_uniprot,
+    match_wt_exact,
+    parse_fasta,
+)
 
 upload_bp = Blueprint("upload", __name__)
 
@@ -30,6 +36,14 @@ def api_uniprot():
 
         # 1) Fetch UniProt
         data = fetch_uniprot(accession)
+        alphafold_link = alphafold_entry_url(data["uniprot_id"])
+        alphafold_prediction = fetch_alphafold_prediction(data["uniprot_id"])
+        alphafold_img = (
+            alphafold_prediction.get("paeImageUrl") if alphafold_prediction else None
+        )
+        alphafold_pdb_url = (
+            alphafold_prediction.get("pdbUrl") if alphafold_prediction else None
+        )
 
         # 2) Ensure UniProtData exists (FK: Experiment.uniprot_id -> UniProt_Data.uniprot_id)
         existing = UniProtData.query.get(data["uniprot_id"])
@@ -37,6 +51,7 @@ def api_uniprot():
             uniprot = UniProtData(
                 uniprot_id=data["uniprot_id"],
                 protein_name=data.get("protein_name"),
+                organism_name=data.get("organism_name"),
                 protein_length=data["protein_length"],
                 protein_sequence=data["protein_sequence"],
             )
@@ -75,9 +90,13 @@ def api_uniprot():
             "wt": {
                 "accession": data["uniprot_id"],
                 "protein_name": data.get("protein_name"),
+                "organism_name": data.get("organism_name"),
                 "sequence": data["protein_sequence"],
                 "sequence_length": data["protein_length"],
                 "features": data.get("features", []),
+                "alphafold_link": alphafold_link,
+                "alphafold_img": alphafold_img,
+                "alphafold_pdb_url": alphafold_pdb_url,
             }
         })
 

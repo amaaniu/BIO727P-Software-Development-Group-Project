@@ -1,5 +1,36 @@
 import requests
+
 from app.uploads.orf_translation import six_frame_orfs, pick_longest_orf
+
+
+def alphafold_entry_url(uniprot_id: str) -> str:
+    return f"https://alphafold.ebi.ac.uk/entry/{uniprot_id}"
+
+
+def fetch_alphafold_prediction(uniprot_id: str, timeout: int = 15):
+    """Return AlphaFold prediction metadata for an accession, or None."""
+    api_url = f"https://alphafold.ebi.ac.uk/api/prediction/{uniprot_id}"
+    response = requests.get(api_url, timeout=timeout)
+    if response.status_code != 200:
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+
+    if not isinstance(payload, list) or not payload:
+        return None
+
+    return payload[0]
+
+
+def fetch_alphafold_thumbnail_url(uniprot_id: str, timeout: int = 15):
+    """Backward-compatible thumbnail getter (currently returns PAE image)."""
+    prediction = fetch_alphafold_prediction(uniprot_id, timeout=timeout)
+    if not prediction:
+        return None
+    return prediction.get("paeImageUrl")
 
 def fetch_uniprot(accession):
     """Fetch UniProt data for a given accession number. Returns a dict with keys"""
@@ -21,12 +52,13 @@ def fetch_uniprot(accession):
 
     data = uniprot_res.json()
 
-    protein_name = (
-        data.get("proteinDescription", {})
+    protein_name = (data.get("proteinDescription", {})
             .get("recommendedName", {})
             .get("fullName", {})
             .get("value", accession)
     )
+
+    organism_name= (data.get("organism", {}).get("scientificName", "Unknown Organism"))
 
     sequence = data.get("sequence", {}).get("value")
     if not sequence:
@@ -52,6 +84,7 @@ def fetch_uniprot(accession):
     return {
         "uniprot_id": accession,
         "protein_name": protein_name,
+        "organism_name": organism_name,
         "protein_sequence": sequence,
         "protein_length": len(sequence),
         "features": features

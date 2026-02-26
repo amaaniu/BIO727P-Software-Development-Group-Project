@@ -1,6 +1,94 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .uniprot-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    width: 90%;
+    margin: 0 auto;
+    background-color: #fafdff;
+  }
+
+  .uniprot-meta-table {
+    margin: 0;
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .uniprot-meta-table th,
+  .uniprot-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .uniprot-meta-table tr:last-child th,
+  .uniprot-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .uniprot-meta-table th:last-child,
+  .uniprot-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .uniprot-meta-table th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .uniprot-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+
+  .feature-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .feature-meta-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .feature-meta-table th,
+  .feature-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .feature-meta-table tr:last-child th,
+  .feature-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .feature-meta-table th:last-child,
+  .feature-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .feature-meta-table thead th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .feature-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+</style>
 
 <div class="row justify-content-center">
   <div class="col-12 col-lg-9">
@@ -38,21 +126,15 @@
           <hr>
           <div class="row g-3">
             <div class="col-12">
-              <div class="d-flex flex-wrap gap-2 align-items-center">
-                <span class="badge bg-primary">UniProt OK</span>
-                <span class="badge bg-accent">Ready for FASTA</span>
-              </div>
-            </div>
-
-            <div class="col-12">
               <div id="uniprotSummary" class="mb-2"></div>
             </div>
 
             <div class="col-12">
-              <h3 class="h6 mb-2">Feature table (preview)</h3>
-              <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle mb-0">
-                  <thead class="table-light">
+              <h3 class="h6 mb-2">Feature table</h3>
+              <div class="feature-meta-wrap">
+                <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 feature-meta-table">
+                  <thead>
                     <tr>
                       <th style="width: 25%;">Type</th>
                       <th style="width: 15%;">Start</th>
@@ -64,6 +146,7 @@
                     <!-- injected -->
                   </tbody>
                 </table>
+                </div>
               </div>
               <div id="featureCount" class="text-muted small mt-2"></div>
             </div>
@@ -131,6 +214,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script>
   const step2 = document.getElementById("step2");
   const step3 = document.getElementById("step3");
@@ -185,6 +269,40 @@
     else uniprotStatus.innerHTML = "";
   }
 
+  async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = "";
+    container.style.position = "relative";
+    container.style.overflow = "hidden";
+
+    if (!pdbUrl || !window.$3Dmol) {
+      container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      return;
+    }
+
+    try {
+      const response = await fetch(pdbUrl);
+      if (!response.ok) throw new Error("PDB fetch failed");
+      const pdbText = await response.text();
+
+      const viewer = $3Dmol.createViewer(container, { backgroundColor: "white" });
+      viewer.addModel(pdbText, "pdb");
+      viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+      viewer.zoomTo();
+      viewer.render();
+      viewer.resize();
+
+      container.style.cursor = "pointer";
+      container.addEventListener("dblclick", () => {
+        window.open(alphafoldLink, "_blank", "noopener");
+      });
+    } catch (_) {
+      container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+    }
+  }
+
   // STEP 1 — UniProt
   btnFetch.addEventListener("click", async () => {
     const accession = uniprotIdInput.value.trim();
@@ -228,35 +346,52 @@
 
       const wt = data.wt;
       wtSequence = wt.sequence;
+      const alphafoldLink = wt.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${wt.accession}`;
+      const alphafoldPdbUrl = wt.alphafold_pdb_url;
+      const viewerId = `alphafold-viewer-${wt.accession.replace(/[^A-Za-z0-9_-]/g, "")}`;
+      const alphafoldHtml = `
+        <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
+        <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
+      `;
 
       setStatus(uniprotStatus, "success", "UniProt ID valid ");
       step2.style.display = "block";
       uniprotDetailsWrap.style.display = "block";
 
       uniprotSummary.innerHTML = `
-        <div class="mb-2">
-          <strong>${wt.protein_name}</strong>
-        </div>
-
-        <div class="text-muted mb-3">
-          <span class="me-3"><strong>Accession:</strong> ${wt.accession}</span>
-          <span><strong>Length:</strong> ${wt.sequence_length} aa</span>
-        </div>  
         <div class="row g-3 align-items-start">
           <div class="col-12 col-lg-6">
-            <div class="small text-muted mb-2">Predicted structure (AlphaFold)</div>
-            <img
-              src="https://alphafold.ebi.ac.uk/files/AF-${wt.accession}-F1-model_v4.png"
-              alt="Predicted structure"
-              class="img-fluid rounded shadow-sm"
-              onerror="this.style.display='none'">
-            <div class="small mt-2">
-              <a href="https://alphafold.ebi.ac.uk/entry/${wt.accession}" target="_blank">
-                Open on AlphaFold
-              </a>
+            <div class="h5 mb-3">
+              <strong>${wt.protein_name}</strong>
+            </div>
+            <div class="uniprot-meta-wrap">
+              <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0 uniprot-meta-table">
+                <tbody>
+                  <tr>
+                    <th style="width: 35%;">Accession</th>
+                    <td>${wt.accession}</td>
+                  </tr>
+                  <tr>
+                    <th>Organism</th>
+                    <td>${wt.organism_name || "Unknown Organism"}</td>
+                  </tr>
+                  <tr>
+                    <th>Length</th>
+                    <td>${wt.sequence_length} aa</td>
+                  </tr>
+                </tbody>
+              </table>
+              </div>
             </div>
           </div>
+          <div class="col-12 col-lg-6">
+            <div class="small fw-bold mb-2 mt-2">AlphaFold Preview</div>
+            <div class="alphafold-wrap mt-2">${alphafoldHtml}</div>
+          </div>
         </div> `;
+
+      await renderAlphaFoldStructure(viewerId, alphafoldPdbUrl, alphafoldLink);
 
             // Feature table
       const feats = wt.features || [];
