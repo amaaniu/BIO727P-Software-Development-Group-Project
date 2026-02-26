@@ -25,10 +25,11 @@ from flask_login import current_user, login_required
 import pandas as pd
 
 # DB models
-from app.models import db, Experiment, Variant, Mutations
+from app.models import db, Experiment, Variant, Mutations, UniProtData
 from app.db_operations import store_analysis_results
 from app.analysis.analysis import analyse_variant
 from app.visualisations.data_sources import get_variants, get_mutations
+from app.uploads.staging import alphafold_entry_url, fetch_alphafold_prediction
 # Analysis + visuals (based on your uploaded scripts)
 from app.visualisations.top10_table_only import compute_top10
 
@@ -244,7 +245,6 @@ def api_render_report():
 
     score_col = "activity_score_log2"
     has_scores = score_col in variants_df.columns and variants_df[score_col].notna().any()
-    score_n = int(variants_df[score_col].notna().sum()) if score_col in variants_df.columns else 0
 
     # Generations list (safe even if generation has NaNs)
     generations = []
@@ -257,13 +257,38 @@ def api_render_report():
             .tolist()
         )
 
-    summary = (
-        f"Experiment: {getattr(exp, 'experiment_name', None)}\n"
-        f"Variants: {len(variants_df)}\n"
-        f"Mutations: {len(mutations_df)}\n"
-        f"Variants with activity score: {score_n}\n"
-        f"Generations: {generations}"
+    uniprot = UniProtData.query.filter_by(uniprot_id=exp.uniprot_id).first()
+    protein_length = (
+        getattr(uniprot, "protein_length", None)
+        or len((getattr(exp, "wt_protein_sequence", "") or "").strip())
+        or None
     )
+
+    alphafold_link = alphafold_entry_url(exp.uniprot_id)
+    alphafold_img = None
+    alphafold_pdb_url = None
+    try:
+        alphafold_prediction = fetch_alphafold_prediction(exp.uniprot_id)
+        if alphafold_prediction:
+            alphafold_img = alphafold_prediction.get("paeImageUrl")
+            alphafold_pdb_url = alphafold_prediction.get("pdbUrl")
+    except Exception:
+        alphafold_img = None
+        alphafold_pdb_url = None
+
+    summary = {
+        "experiment_name": getattr(exp, "experiment_name", None),
+        "accession": exp.uniprot_id,
+        "protein_name": getattr(uniprot, "protein_name", None),
+        "organism_name": getattr(uniprot, "organism_name", None),
+        "sequence_length": protein_length,
+        "variants": len(variants_df),
+        "mutations": len(mutations_df),
+        "generations": generations,
+        "alphafold_link": alphafold_link,
+        "alphafold_img": alphafold_img,
+        "alphafold_pdb_url": alphafold_pdb_url,
+    }
 
     # ---- 1) Top 10 table ----
     try:
@@ -272,7 +297,7 @@ def api_render_report():
 
         viz1 = top10_df.to_html(
             index=False,
-            classes="table table-sm table-striped table-bordered align-middle",
+            classes="table table-sm align-middle mb-0 feature-meta-table",
             border=0,
         )
     except Exception as e:

@@ -45,18 +45,24 @@ def api_uniprot():
             alphafold_prediction.get("pdbUrl") if alphafold_prediction else None
         )
 
-        # 2) Ensure UniProtData exists (FK: Experiment.uniprot_id -> UniProt_Data.uniprot_id)
+        # 2) Upsert UniProt metadata (FK: Experiment.uniprot_id -> UniProt_Data.uniprot_id)
         existing = UniProtData.query.get(data["uniprot_id"])
         if not existing:
-            uniprot = UniProtData(
+            existing = UniProtData(
                 uniprot_id=data["uniprot_id"],
                 protein_name=data.get("protein_name"),
                 organism_name=data.get("organism_name"),
                 protein_length=data["protein_length"],
                 protein_sequence=data["protein_sequence"],
             )
-            db.session.add(uniprot)
-            db.session.commit()
+            db.session.add(existing)
+        else:
+            # Backfill/refresh values so old partial rows don't keep organism_name as NULL.
+            existing.protein_name = data.get("protein_name") or existing.protein_name
+            existing.organism_name = data.get("organism_name") or existing.organism_name
+            existing.protein_length = data["protein_length"]
+            existing.protein_sequence = data["protein_sequence"]
+        db.session.commit()
 
         # 3) Store features (and commit them)
         for f in data.get("features", []):

@@ -1,6 +1,96 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container py-4">
+<style>
+  .uniprot-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .uniprot-meta-table {
+    margin: 0;
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .uniprot-meta-table th,
+  .uniprot-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .uniprot-meta-table tr:last-child th,
+  .uniprot-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .uniprot-meta-table th:last-child,
+  .uniprot-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .uniprot-meta-table th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .uniprot-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+
+  .alphafold-wrap {
+    min-height: 360px;
+  }
+
+  .feature-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .feature-meta-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .feature-meta-table th,
+  .feature-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .feature-meta-table tr:last-child th,
+  .feature-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .feature-meta-table th:last-child,
+  .feature-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .feature-meta-table thead th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .feature-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+</style>
+<div id="reportPage" class="container py-4" data-experiment-id="{{ experiment_id }}">
 
   <h1 class="mb-3">Analysis</h1>
 
@@ -33,7 +123,7 @@
       <!-- Summary FIRST -->
       <div class="mb-4 d-none" id="summaryBlock">
         <h3 class="h6 mb-2">Summary</h3>
-        <pre class="mb-0" id="summaryText"></pre>
+        <div id="summaryContent"></div>
       </div>
 
       <!-- Then visuals -->
@@ -67,9 +157,11 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
-  const experimentId = {{ experiment_id|tojson }};
+  const pageEl = document.getElementById("reportPage");
+  const experimentId = Number(pageEl?.dataset?.experimentId);
 
   const bar = document.getElementById("progressBar");
   const label = document.getElementById("progressLabel");
@@ -79,7 +171,7 @@
   const resultsBlock = document.getElementById("resultsBlock");
 
   const summaryBlock = document.getElementById("summaryBlock");
-  const summaryText = document.getElementById("summaryText");
+  const summaryContent = document.getElementById("summaryContent");
 
   const blocks = [
     { block: document.getElementById("viz1Block"), el: document.getElementById("viz1"), key: "viz1" },
@@ -119,6 +211,142 @@
     }
   }
 
+  function applyUploadTableStyle(target) {
+    const table = target.querySelector("table");
+    if (!table) return;
+
+    table.classList.add("table", "table-sm", "align-middle", "mb-0", "feature-meta-table");
+    table.classList.remove("table-striped", "table-bordered");
+
+    const parent = table.parentElement;
+    if (parent && parent.classList.contains("feature-meta-wrap")) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "table-responsive feature-meta-wrap";
+    if (parent) {
+      parent.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    }
+  }
+
+  async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink, imageUrl) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = "";
+    container.style.position = "relative";
+    container.style.overflow = "hidden";
+
+    if (!pdbUrl || !window.$3Dmol) {
+      if (imageUrl) {
+        const safeUrl = String(imageUrl).replace(/"/g, "&quot;");
+        const safeLink = String(alphafoldLink || "#").replace(/"/g, "&quot;");
+        container.innerHTML = `
+          <a href="${safeLink}" target="_blank" rel="noopener">
+            <img src="${safeUrl}" alt="AlphaFold preview" style="width:100%; height:100%; object-fit:cover;" />
+          </a>
+        `;
+      } else {
+        container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(pdbUrl);
+      if (!response.ok) throw new Error("PDB fetch failed");
+      const pdbText = await response.text();
+
+      const viewer = $3Dmol.createViewer(container, { backgroundColor: "white" });
+      viewer.addModel(pdbText, "pdb");
+      viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+      viewer.zoomTo();
+      viewer.render();
+      viewer.resize();
+
+      container.style.cursor = "pointer";
+      container.addEventListener("dblclick", () => {
+        if (alphafoldLink) window.open(alphafoldLink, "_blank", "noopener");
+      });
+    } catch (_) {
+      if (imageUrl) {
+        const safeUrl = String(imageUrl).replace(/"/g, "&quot;");
+        const safeLink = String(alphafoldLink || "#").replace(/"/g, "&quot;");
+        container.innerHTML = `
+          <a href="${safeLink}" target="_blank" rel="noopener">
+            <img src="${safeUrl}" alt="AlphaFold preview" style="width:100%; height:100%; object-fit:cover;" />
+          </a>
+        `;
+      } else {
+        container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      }
+    }
+  }
+
+  async function renderSummary(summary) {
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    }[ch]));
+
+    if (!summary || typeof summary !== "object") {
+      summaryContent.textContent = summary || "";
+      return;
+    }
+
+    const accession = summary.accession || "-";
+    const proteinName = escapeHtml(summary.protein_name || "Unknown protein");
+    const organismName = escapeHtml(summary.organism_name || "Unknown organism");
+    const sequenceLength = summary.sequence_length ? `${summary.sequence_length} aa` : "N/A";
+    const variants = Number.isFinite(summary.variants) ? summary.variants : "N/A";
+    const mutations = Number.isFinite(summary.mutations) ? summary.mutations : "N/A";
+    const generations = Array.isArray(summary.generations) && summary.generations.length
+      ? escapeHtml(summary.generations.join(", "))
+      : "N/A";
+    const accessionText = escapeHtml(accession);
+    const alphafoldLink = summary.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${accession}`;
+    const viewerId = `alphafold-report-${String(accession).replace(/[^A-Za-z0-9_-]/g, "")}`;
+
+    summaryContent.innerHTML = `
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-lg-6">
+          <div class="h5 mb-3"><strong>${proteinName}</strong></div>
+          <div class="uniprot-meta-wrap">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0 uniprot-meta-table">
+                <tbody>
+                  <tr><th style="width: 35%;">Accession</th><td>${accessionText}</td></tr>
+                  <tr><th>Organism</th><td>${organismName}</td></tr>
+                  <tr><th>Length</th><td>${escapeHtml(sequenceLength)}</td></tr>
+                  <tr><th>Variants</th><td>${escapeHtml(variants)}</td></tr>
+                  <tr><th>Mutations</th><td>${escapeHtml(mutations)}</td></tr>
+                  <tr><th>Generations</th><td>${generations}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="small fw-bold mb-2 mt-2">AlphaFold Preview</div>
+          <div class="alphafold-wrap mt-2">
+            <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
+            <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await renderAlphaFoldStructure(
+      viewerId,
+      summary.alphafold_pdb_url,
+      alphafoldLink,
+      summary.alphafold_img
+    );
+  }
+
   function renderViz(target, payload) {
     if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
       target.innerHTML = "";
@@ -137,6 +365,7 @@
       return;
     }
     setHtmlWithScripts(target, payload || "<p class='text-muted'>No output.</p>");
+    applyUploadTableStyle(target);
   }
 
   function setPct(pct) {
@@ -145,15 +374,41 @@
     label.textContent = pct + "%";
   }
 
-  // Smooth fake progress while server works (won't hit 100 until server done)
+  // Timed fake progress while server works (won't hit 100 until server done)
+  // Phase 1: 0 -> 92 in 25s
+  // Phase 2: 93 -> 97 in 10s
   let fakePct = 0;
+  const startTs = Date.now();
+  const phase1Ms = 25_000;
+  const phase2Ms = 10_000;
+  const maxFakePct = 97;
+
   const fakeTimer = setInterval(() => {
-    // climb to 92% then wait
-    if (fakePct < 92) fakePct += Math.max(1, Math.round((92 - fakePct) * 0.06));
+    const elapsed = Date.now() - startTs;
+    let nextPct = fakePct;
+
+    if (elapsed <= phase1Ms) {
+      const t = elapsed / phase1Ms;
+      nextPct = Math.floor(92 * t);
+    } else if (elapsed <= (phase1Ms + phase2Ms)) {
+      const t = (elapsed - phase1Ms) / phase2Ms;
+      nextPct = 93 + Math.floor(5 * t);
+    } else {
+      nextPct = maxFakePct;
+    }
+
+    if (nextPct > maxFakePct) nextPct = maxFakePct;
+    if (nextPct < fakePct) nextPct = fakePct; // never move backwards
+
+    fakePct = nextPct;
     setPct(fakePct);
-  }, 120);
+  }, 100);
 
   async function runAnalysis() {
+    if (!Number.isFinite(experimentId)) {
+      throw new Error("Missing or invalid experiment ID.");
+    }
+
     // 1) Trigger analysis (writes results to DB)
     const res = await fetch("/report/api/run-analysis", {
       method: "POST",
@@ -183,7 +438,7 @@
     resultsBlock.classList.remove("d-none");
 
     // show summary FIRST
-    summaryText.textContent = out.summary || "";
+    await renderSummary(out.summary);
     summaryBlock.classList.remove("d-none");
 
     // then visuals (staged)
