@@ -1,7 +1,7 @@
 """
 Mutation fingerprint visualisation.
 
-Bonus visual: show specific amino acid changes and the generation introduced. 
+Bonus visual: show specific amino acid changes and the generation introduced.
 """
 
 from __future__ import annotations
@@ -9,16 +9,16 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 
 
 def plot_mutation_fingerprint(
     mutations_df: pd.DataFrame,
     variant_id: Any,
     title: str = "Mutation fingerprint",
-):
+) -> go.Figure:
     """
-    Scatter plot of mutation position vs generation for a selected variant.
+    Fingerprint plot of mutation position vs generation for a selected variant.
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ def plot_mutation_fingerprint(
 
     Returns
     -------
-    plotly.graph_objs._figure.Figure
+    plotly.graph_objects.Figure
 
     Raises
     ------
@@ -51,27 +51,69 @@ def plot_mutation_fingerprint(
     df["generation"] = pd.to_numeric(df["generation"], errors="coerce")
     df["position"] = pd.to_numeric(df["position"], errors="coerce")
     df = df.dropna(subset=["generation", "position"])
+    df["generation"] = df["generation"].astype(int)
+    df["position"] = df["position"].astype(int)
 
     df["mutation_label"] = (
         df["wt_residue"].astype(str)
-        + df["position"].astype(int).astype(str)
+        + df["position"].astype(str)
         + df["mutant_residue"].astype(str)
     )
 
-    fig = px.scatter(
-        df,
-        x="position",
-        y="generation",
-        color="generation",
-        hover_name="mutation_label",
-        title=title,
+    # If multiple mutations occur at the same (position, generation), join labels.
+    cell = (
+        df.groupby(["generation", "position"])["mutation_label"]
+        .apply(lambda s: ",".join(sorted(set(s.astype(str)))))
+        .reset_index()
     )
+
+    generations = sorted(cell["generation"].unique())
+    positions = sorted(cell["position"].unique())
+
+    z = pd.DataFrame(index=generations, columns=positions, dtype=float)
+    text = pd.DataFrame(index=generations, columns=positions, dtype=object)
+
+    # Fill: colour is generation, text is mutation label
+    for _, r in cell.iterrows():
+        g = int(r["generation"])
+        p = int(r["position"])
+        z.loc[g, p] = g
+        text.loc[g, p] = r["mutation_label"]
+
+    z = z.to_numpy()
+    text = text.fillna("").to_numpy()
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            x=positions,
+            y=generations,
+            z=z,
+            text=text,
+            hovertemplate=(
+                "Position=%{x}<br>"
+                "Generation=%{y}<br>"
+                "Mutation=%{text}<extra></extra>"
+            ),
+            colorscale="Blues",
+            colorbar=dict(title="Generation"),
+            zmin=min(generations),
+            zmax=max(generations),
+        )
+    )
+
+    fig.update_traces(
+        texttemplate="%{text}",
+        textfont=dict(size=10),
+    )
+
     fig.update_layout(
+        title=title,
         xaxis_title="Amino acid position",
         yaxis_title="Generation introduced",
         template="simple_white",
     )
-    fig.update_xaxes(showgrid=True, gridwidth=1)
-    fig.update_yaxes(showgrid=True, gridwidth=1)
+
+    fig.update_xaxes(showgrid=True, gridwidth=1, tickmode="auto")
+    fig.update_yaxes(showgrid=True, gridwidth=1, autorange="reversed")
 
     return fig

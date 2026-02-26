@@ -1,9 +1,3 @@
-"""
-Trend summaries across generations.
-
-This complements the per-generation distribution plot by showing central tendency and spread over time.
-"""
-
 from __future__ import annotations
 
 import pandas as pd
@@ -86,13 +80,18 @@ def plot_activity_median_trend(
     summary = summarise_activity_by_generation(df, score_col=score_col)
     fig = go.Figure()
 
+    # Colour palette
+    median_colour = "#0B3D91"          # dark blue
+    iqr_fill_colour = "rgba(64, 224, 208, 0.3)"  # turquoise (semi-transparent)
+    iqr_line_colour = "rgba(64, 224, 208, 0)"
+
     if show_iqr:
         fig.add_trace(
             go.Scatter(
                 x=summary["generation"],
                 y=summary["q75"],
                 mode="lines",
-                line=dict(width=0),
+                line=dict(width=0, color=iqr_line_colour),
                 showlegend=False,
                 hoverinfo="skip",
             )
@@ -102,8 +101,9 @@ def plot_activity_median_trend(
                 x=summary["generation"],
                 y=summary["q25"],
                 mode="lines",
-                line=dict(width=0),
+                line=dict(width=0, color=iqr_line_colour),
                 fill="tonexty",
+                fillcolor=iqr_fill_colour,
                 name="IQR (25th–75th)",
             )
         )
@@ -114,6 +114,8 @@ def plot_activity_median_trend(
             y=summary["median"],
             mode="lines+markers" if show_markers else "lines",
             name="Median",
+            line=dict(color=median_colour, width=3),
+            marker=dict(color=median_colour, size=6),
         )
     )
 
@@ -123,6 +125,7 @@ def plot_activity_median_trend(
         yaxis_title="Activity Score (log2 normalised ratio)",
         template="simple_white",
     )
+
     fig.update_xaxes(dtick=1, showgrid=True, gridwidth=1)
     fig.update_yaxes(showgrid=True, gridwidth=1)
 
