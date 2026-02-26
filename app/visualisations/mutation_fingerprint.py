@@ -1,7 +1,5 @@
-#Fingerprinting
-
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -10,28 +8,32 @@ import plotly.graph_objects as go
 def plot_mutation_fingerprint(
     mutations_df: pd.DataFrame,
     variant_id: Any,
-    protein_length: int,
+    protein_length: int | None = None,  # <-- optional now
     title: str = "Mutation fingerprint",
     *,
-    y_level: float = 0.5,          
-    label_y_offset: float = 0.15,   
+    y_level: float = 0.5,
 ) -> go.Figure:
     required = {"variant_id", "generation", "position", "wt_residue", "mutant_residue"}
     missing = required - set(mutations_df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
-    if not protein_length or protein_length <= 0:
-        raise ValueError("protein_length must be a positive integer")
 
     df = mutations_df.loc[mutations_df["variant_id"] == variant_id].copy()
     if df.empty:
         raise ValueError(f"No mutations found for variant_id={variant_id}")
 
-    df["generation"] = pd.to_numeric(df["generation"], errors="coerce").astype("Int64")
-    df["position"] = pd.to_numeric(df["position"], errors="coerce").astype("Int64")
+    df["generation"] = pd.to_numeric(df["generation"], errors="coerce")
+    df["position"] = pd.to_numeric(df["position"], errors="coerce")
     df = df.dropna(subset=["generation", "position"])
     df["generation"] = df["generation"].astype(int)
     df["position"] = df["position"].astype(int)
+
+    # Fallback protein length if not provided by caller
+    if protein_length is None:
+        protein_length = int(df["position"].max()) if not df.empty else 1
+
+    if not isinstance(protein_length, int) or protein_length <= 0:
+        raise ValueError("protein_length must be a positive integer")
 
     # Build labels like "E35V"
     df["mutation_label"] = (
@@ -40,13 +42,12 @@ def plot_mutation_fingerprint(
         + df["mutant_residue"].astype(str)
     )
 
-    # If multiple mutations at same (generation, position), join labels
+    # Join labels if multiple mutations at same (generation, position)
     df = (
-        df.groupby(["generation", "position"], as_index=False)["mutation_label"]
-        .apply(lambda g: pd.Series({"mutation_label": ", ".join(sorted(set(g["mutation_label"])))}))
+        df.groupby(["generation", "position"], as_index=False)
+        .agg(mutation_label=("mutation_label", lambda s: ", ".join(sorted(set(s)))))
     )
 
-    # Plot: one trace per generation so legend matches "Generation 1..10"
     gens = sorted(df["generation"].unique())
 
     fig = go.Figure()
@@ -97,7 +98,6 @@ def plot_mutation_fingerprint(
             zeroline=False,
         ),
         yaxis=dict(
-            title="",
             range=[0, 1],
             showgrid=False,
             showticklabels=False,

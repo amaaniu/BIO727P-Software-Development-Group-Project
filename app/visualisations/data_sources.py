@@ -277,9 +277,7 @@ def fetch_mutations_table(experiment_id: int) -> List[Dict[str, Any]]:
     return rows
 
 
-# =============================================================================
-# 3) DEMO RUNNER 
-# =============================================================================
+
 
 def _require_columns(df: pd.DataFrame, required: set[str], name: str) -> None:
     missing = required - set(df.columns)
@@ -357,9 +355,20 @@ def main(argv: Optional[list[str]] = None) -> None:
 
         best_variant_id = top10.loc[0, "variant_id"]
 
+        # Get protein length from variants dataframe
+        row = variants_df.loc[variants_df["variant_id"] == best_variant_id].iloc[0]
+        protein_seq = row.get("protein_sequence")
+
+        protein_length = (
+            len(protein_seq)
+            if isinstance(protein_seq, str) and protein_seq
+            else int(muts_df["position"].max())
+        )
+
         fp_fig = plot_mutation_fingerprint(
             muts_df,
             variant_id=best_variant_id,
+            protein_length=protein_length,
             title=f"Mutation fingerprint (variant {best_variant_id})",
         )
         fp_html, fp_png = save_plotly_figure(fp_fig, out_prefix="mutation_fingerprint", output_dir=output_dir)
@@ -377,14 +386,3 @@ def main(argv: Optional[list[str]] = None) -> None:
         outputs.append(Path(land_html))
         if land_png:
             outputs.append(Path(land_png))
-
-    _save_outputs_hint(outputs)
-
-    if args.open_html:
-        for p in outputs:
-            if p.suffix.lower() == ".html":
-                webbrowser.open(p.resolve().as_uri())
-
-
-if __name__ == "__main__":
-    main()
