@@ -298,13 +298,13 @@ body:not(.home-page) .card:hover {
 /* Custom styles for the buttons */
 .btn-primary {
   background-color: var(--color-accent);
-  border-color: var(--color-foreground);
+  border-color: var(--color-accent);
   color: var(--color-accent-foreground);
 }
 
 .btn-secondary {
   background-color: var(--color-accent-dark);
-  border-color: var(--color-foreground);
+  border-color: var(--color-accent-dark);
   color: var(--color-accent-foreground);
 }
 

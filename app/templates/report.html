@@ -90,7 +90,13 @@
     color: var(--color-foreground);
   }
 </style>
-<div id="reportPage" class="container py-4" data-experiment-id="{{ experiment_id }}">
+<div
+  id="reportPage"
+  class="container py-4"
+  data-experiment-id="{{ experiment_id }}"
+  data-run-analysis-url="{{ url_for('report.api_run_analysis') }}"
+  data-render-report-url="{{ url_for('report.api_render_report') }}"
+>
 
   <h1 class="mb-3">Analysis</h1>
 
@@ -162,6 +168,8 @@
 <script>
   const pageEl = document.getElementById("reportPage");
   const experimentId = Number(pageEl?.dataset?.experimentId);
+  const runAnalysisUrl = pageEl?.dataset?.runAnalysisUrl || "/report/api/run-analysis";
+  const renderReportUrl = pageEl?.dataset?.renderReportUrl || "/report/api/render-report";
 
   const bar = document.getElementById("progressBar");
   const label = document.getElementById("progressLabel");
@@ -410,11 +418,17 @@
     }
 
     // 1) Trigger analysis (writes results to DB)
-    const res = await fetch("/report/api/run-analysis", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ experiment_id: experimentId })
-    });
+    let res;
+    try {
+      res = await fetch(runAnalysisUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experiment_id: experimentId })
+      });
+    } catch (networkErr) {
+      const detail = networkErr && networkErr.message ? networkErr.message : String(networkErr);
+      throw new Error(`Network error calling ${runAnalysisUrl}: ${detail}`);
+    }
 
     const data = await parseJsonResponse(res, "Analysis request failed");
     if (!res.ok || !data.ok) throw new Error(data.error || "Analysis failed");
@@ -430,7 +444,14 @@
     bar.classList.remove("progress-bar-striped");
 
     // 3) Fetch rendered report content
-    const rr = await fetch(`/report/api/render-report?experiment_id=${encodeURIComponent(experimentId)}`);
+    let rr;
+    const renderUrl = `${renderReportUrl}?experiment_id=${encodeURIComponent(experimentId)}`;
+    try {
+      rr = await fetch(renderUrl);
+    } catch (networkErr) {
+      const detail = networkErr && networkErr.message ? networkErr.message : String(networkErr);
+      throw new Error(`Network error calling ${renderUrl}: ${detail}`);
+    }
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
