@@ -244,6 +244,19 @@
     el.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${msg}</div>`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatTextBlock(value) {
+    return escapeHtml(value).replace(/\n/g, "<br>");
+  }
+
   function resetAll(message="") {
     step2.style.display = "none";
     step3.style.display = "none";
@@ -353,6 +366,41 @@
         <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
         <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
       `;
+      const similarityTexts = wt.similarity_texts || [];
+      const familyText = wt.family_text || (similarityTexts.length ? similarityTexts.join(" ") : "");
+      const hasCuratedAnnotation = !!(wt.function_text || wt.catalytic_activity || familyText);
+      const annotationRowsHtml = `
+        ${wt.gene_name ? `
+          <tr>
+            <th>Gene</th>
+            <td>${escapeHtml(wt.gene_name)}</td>
+          </tr>
+        ` : ""}
+        ${wt.function_text ? `
+          <tr>
+            <th>Function</th>
+            <td>${formatTextBlock(wt.function_text)}</td>
+          </tr>
+        ` : ""}
+        ${wt.catalytic_activity ? `
+          <tr>
+            <th>Catalytic activity</th>
+            <td>${formatTextBlock(wt.catalytic_activity)}</td>
+          </tr>
+        ` : ""}
+        ${familyText ? `
+          <tr>
+            <th>Family</th>
+            <td>${formatTextBlock(familyText)}</td>
+          </tr>
+        ` : ""}
+        ${!hasCuratedAnnotation ? `
+          <tr>
+            <th>Annotation</th>
+            <td class="text-muted">No curated functional annotation available.</td>
+          </tr>
+        ` : ""}
+      `;
 
       setStatus(uniprotStatus, "success", "UniProt ID valid ");
       step2.style.display = "block";
@@ -380,6 +428,7 @@
                     <th>Length</th>
                     <td>${wt.sequence_length} aa</td>
                   </tr>
+                  ${annotationRowsHtml}
                 </tbody>
               </table>
               </div>
@@ -389,7 +438,8 @@
             <div class="small fw-bold mb-2 mt-2">AlphaFold Preview</div>
             <div class="alphafold-wrap mt-2">${alphafoldHtml}</div>
           </div>
-        </div> `;
+        </div>
+      `;
 
       await renderAlphaFoldStructure(viewerId, alphafoldPdbUrl, alphafoldLink);
 
