@@ -348,41 +348,41 @@ def main(argv: Optional[list[str]] = None) -> None:
     table_png = save_top10_table_png(top10, out_name="top10_variants_table", output_dir=output_dir)
     outputs.append(Path(table_png))
 
-   # Bonus plots if mutations provided
-if muts_df is not None and not muts_df.empty:
-    from visualisation.mutation_fingerprint import plot_mutation_fingerprint  # type: ignore
-    from visualisation.activity_landscape_3d import plot_activity_landscape_3d  # type: ignore
+    # Bonus plots if mutations provided
+    if muts_df is not None and not muts_df.empty:
+        from visualisation.mutation_fingerprint import plot_mutation_fingerprint  # type: ignore
+        from visualisation.activity_landscape_3d import plot_activity_landscape_3d  # type: ignore
 
-    best_variant_id = top10.loc[0, "variant_id"]
+        best_variant_id = top10.loc[0, "variant_id"]
 
-    # Get protein length from variants dataframe
-    row = variants_df.loc[variants_df["variant_id"] == best_variant_id].iloc[0]
-    protein_seq = row.get("protein_sequence")
+        # Get protein length from variants dataframe
+        row = variants_df.loc[variants_df["variant_id"] == best_variant_id].iloc[0]
+        protein_seq = row.get("protein_sequence")
 
-    protein_length = (
-        len(protein_seq)
-        if isinstance(protein_seq, str) and protein_seq
-        else int(muts_df["position"].max())
-    )
+        protein_length = (
+            len(protein_seq)
+            if isinstance(protein_seq, str) and protein_seq
+            else int(muts_df["position"].max())
+        )
 
-    fp_fig = plot_mutation_fingerprint(
-        muts_df,
-        variant_id=best_variant_id,
-        protein_length=protein_length,
-        title=f"Mutation fingerprint (variant {best_variant_id})",
-    )
-    fp_html, fp_png = save_plotly_figure(fp_fig, out_prefix="mutation_fingerprint", output_dir=output_dir)
-    outputs.append(Path(fp_html))
-    if fp_png:
-        outputs.append(Path(fp_png))
+        fp_fig = plot_mutation_fingerprint(
+            muts_df,
+            variant_id=best_variant_id,
+            protein_length=protein_length,
+            title=f"Mutation fingerprint (variant {best_variant_id})",
+        )
+        fp_html, fp_png = save_plotly_figure(fp_fig, out_prefix="mutation_fingerprint", output_dir=output_dir)
+        outputs.append(Path(fp_html))
+        if fp_png:
+            outputs.append(Path(fp_png))
 
-    land_fig = plot_activity_landscape_3d(
-        variants_df,
-        muts_df,
-        score_col=score_col,
-        title="3D Activity Landscape (PCA on mutation positions)",
-    )
-    land_html, land_png = save_plotly_figure(land_fig, out_prefix="activity_landscape_3d", output_dir=output_dir)
-    outputs.append(Path(land_html))
-    if land_png:
-        outputs.append(Path(land_png))
+        land_fig = plot_activity_landscape_3d(
+            variants_df,
+            muts_df,
+            score_col=score_col,
+            title="3D Activity Landscape (PCA on mutation positions)",
+        )
+        land_html, land_png = save_plotly_figure(land_fig, out_prefix="activity_landscape_3d", output_dir=output_dir)
+        outputs.append(Path(land_html))
+        if land_png:
+            outputs.append(Path(land_png))
