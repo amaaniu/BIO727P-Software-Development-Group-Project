@@ -140,6 +140,7 @@ def api_run_analysis():
             mutations_inserted += store_analysis_results(v, result)
             analysed += 1
 
+        exp.status = "completed"
         db.session.commit()
 
         return jsonify({

@@ -146,11 +146,8 @@ def dashboard():
         variant_total = int(row.variant_count or 0)
         if raw_status in ('completed', 'complete', 'done'):
             status = 'Completed'
-        elif raw_status in ('in-progress', 'in progress', 'active', 'ongoing', 'paused', 'hold', 'on hold'):
-            status = 'In Progress'
         else:
-            # Fallback: if variants exist, treat as work-in-progress; otherwise staged.
-            status = 'In Progress' if variant_total > 0 else 'Staged'
+            status = 'In Progress'
             
         # Structure the experiment data for rendering in the dashboard template, including the experiment ID, name, UniProt ID, determined status, maximum generation number, total variant count, and last updated timestamp.
         all_experiments.append({
@@ -173,7 +170,9 @@ def dashboard():
     if status_filter == 'all':
         experiments = all_experiments
     else:
-        experiments = [exp for exp in all_experiments if exp['status'].lower() == status_filter]
+        experiments = [
+            exp for exp in all_experiments 
+            if exp['status'].lower().replace(' ', '_') == status_filter]
 
     return render_template(
         'dashboard.html',
@@ -198,7 +197,7 @@ def view_report(experiment_id):
     )
     if experiment is None:
         abort(404)
-    return redirect(url_for('report.report', experiment_id=experiment_id))
+    return redirect(url_for('report.report_page', experiment_id=experiment_id))
 
 @main_bp.route('/experiments/new')
 @login_required

@@ -187,11 +187,13 @@ def api_upload_data():
             if not experiment or experiment.user_id != current_user.user_id:
                 return jsonify({"ok": False, "error": "Experiment not found for current user."}), 404
 
+
+
         # 3) If uploading non-experiment data without an experiment_id, create a placeholder Experiment
         if data_type != "experiment" and not experiment_id:
             return jsonify({"ok": False, "error": "experiment_id is required for this upload."}), 400
         
-
+        
         # 4) Now do the real insert
         result = process_and_insert(
             file,
@@ -199,6 +201,16 @@ def api_upload_data():
             user_id=current_user.user_id
         )
 
+        if experiment_id and result.get("data_type") in {"variant", "mutation", "activity", "control"}:
+            experiment = Experiment.query.filter_by(
+                experiment_id=experiment_id,
+                user_id=current_user.user_id
+            ).first()
+            if experiment and (experiment.status or "").strip().lower() not in {"completed", "complete", "done"}:
+                experiment.status = "in_progress"
+                db.session.commit()
+ 
+ 
         return jsonify({
             "ok": True,
             "data_type": result["data_type"],
