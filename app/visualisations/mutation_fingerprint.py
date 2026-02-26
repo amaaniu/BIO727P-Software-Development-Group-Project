@@ -8,26 +8,15 @@ import plotly.graph_objects as go
 def plot_mutation_fingerprint(
     mutations_df: pd.DataFrame,
     variant_id: Any,
-    protein_length: int,
+    protein_length: int | None = None,  # <-- optional now
     title: str = "Mutation fingerprint",
     *,
     y_level: float = 0.5,
 ) -> go.Figure:
-    """
-    Example-style mutation fingerprint:
-    - x: amino-acid position (true spacing)
-    - markers: triangle-down, colored by generation (legend per generation)
-    - labels: WTposMut (e.g., E35V)
-    - grey bar: protein length
-    """
-
     required = {"variant_id", "generation", "position", "wt_residue", "mutant_residue"}
     missing = required - set(mutations_df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
-
-    if not isinstance(protein_length, int) or protein_length <= 0:
-        raise ValueError("protein_length must be a positive integer")
 
     df = mutations_df.loc[mutations_df["variant_id"] == variant_id].copy()
     if df.empty:
@@ -39,14 +28,21 @@ def plot_mutation_fingerprint(
     df["generation"] = df["generation"].astype(int)
     df["position"] = df["position"].astype(int)
 
-    # Build mutation labels like "E35V"
+    # Fallback protein length if not provided by caller
+    if protein_length is None:
+        protein_length = int(df["position"].max()) if not df.empty else 1
+
+    if not isinstance(protein_length, int) or protein_length <= 0:
+        raise ValueError("protein_length must be a positive integer")
+
+    # Build labels like "E35V"
     df["mutation_label"] = (
         df["wt_residue"].astype(str)
         + df["position"].astype(str)
         + df["mutant_residue"].astype(str)
     )
 
-    # groupby aggregation
+    # Join labels if multiple mutations at same (generation, position)
     df = (
         df.groupby(["generation", "position"], as_index=False)
         .agg(mutation_label=("mutation_label", lambda s: ", ".join(sorted(set(s)))))
@@ -68,10 +64,8 @@ def plot_mutation_fingerprint(
         layer="below",
     )
 
-    # One trace per generation
     for g in gens:
         dfg = df[df["generation"] == g].sort_values("position")
-
         fig.add_trace(
             go.Scatter(
                 x=dfg["position"],
