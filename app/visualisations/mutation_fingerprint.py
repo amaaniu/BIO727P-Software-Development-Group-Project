@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-def plot_mutation_fingerprint_scatter(
+def plot_mutation_fingerprint(
     mutations_df: pd.DataFrame,
     variant_id: Any,
     protein_length: int,
