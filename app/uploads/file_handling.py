@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -362,7 +363,18 @@ def process_variant_data(df):
             if not failed.empty:
                 raise ValueError(f"Column '{col}' contains non-numeric values.")
 
-    df = df[VARIANT_FIELDS].replace({pd.NA: None, '': None})
+    # Capture any extra columns (not in VARIANT_FIELDS) as JSON in custom_metadata
+    extra_cols = [c for c in df.columns if c not in VARIANT_FIELDS]
+    if extra_cols:
+        df['custom_metadata'] = df[extra_cols].apply(
+            lambda row: json.dumps({k: (None if pd.isna(v) else v) for k, v in row.items()}),
+            axis=1
+        )
+    else:
+        df['custom_metadata'] = None
+
+    keep = VARIANT_FIELDS + ['custom_metadata']
+    df = df[keep].replace({pd.NA: None, '': None})
     return df.where(pd.notnull(df), None).to_dict('records')
 
 
