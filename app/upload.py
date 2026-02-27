@@ -76,11 +76,10 @@ def api_uniprot():
         db.session.commit()
 
         # 4) Create experiment
-        exp_name = (payload.get("experiment_name") or "Untitled experiment").strip()
 
         experiment = Experiment(
             user_id=current_user.user_id,
-            experiment_name=exp_name,
+            experiment_name="experiment",
             uniprot_id=data["uniprot_id"],
             wt_protein_sequence=data["protein_sequence"],
             status="uniprot_loaded",
@@ -88,8 +87,11 @@ def api_uniprot():
         )
 
         db.session.add(experiment)
-        db.session.commit()
+        db.session.flush()  # Get experiment_id populated
 
+        experiment.experiment_name = f"experiment {experiment.experiment_id}"
+        db.session.commit()
+        
         return jsonify({
             "ok": True,
             "experiment_id": experiment.experiment_id,
