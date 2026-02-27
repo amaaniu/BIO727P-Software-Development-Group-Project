@@ -366,6 +366,7 @@
           fig.layout || {},
           { responsive: true, displayModeBar: true }
         );
+        requestAnimationFrame(() => Plotly.Plots.resize(target));
       } catch (err) {
         const msg = (err && err.message) ? err.message : String(err);
         target.innerHTML = `<p class='text-danger'>Plot render failed: ${msg}</p>`;
@@ -465,8 +466,8 @@
     // then visuals (staged)
     const viz = out.viz || {};
     for (const item of blocks) {
-      renderViz(item.el, viz[item.key]);
       item.block.classList.remove("d-none");
+      renderViz(item.el, viz[item.key]);
       await new Promise(r => setTimeout(r, 250)); // small stagger for “nice”
     }
   }

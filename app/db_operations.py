@@ -1,6 +1,6 @@
 # db_operations.py
 
-from app.models import db, Experiment, Variant, Mutations, Activity, ControlData, UniProtData, UniProtFeature
+from app.models import db, Experiment, Variant, Mutations, Activity, UniProtData, UniProtFeature
 from datetime import datetime
 import json
 
@@ -194,34 +194,6 @@ def insert_activity_records(records, variant_id):
     return activity_objects
 
 
-def insert_control_records(records, experiment_id):
-    """
-    Insert control records into database.
-    
-    Args:
-        records: List of control dicts from file_processor
-        experiment_id: ID of experiment these controls belong to
-        
-    Returns:
-        List of created ControlData objects
-    """
-    control_objects = []
-    
-    for record in records:
-        control = ControlData(
-            experiment_id=experiment_id,
-            generation=int(record['generation']),
-            control_type=record['control_type'],
-            protein_yield=float(record['protein_yield']),
-            dna_yield=float(record['dna_yield'])
-        )
-        
-        db.session.add(control)
-        control_objects.append(control)
-    
-    db.session.commit()
-    return control_objects
-
 
 def process_and_insert(file, experiment_id=None, user_id=None):
     """
@@ -229,7 +201,7 @@ def process_and_insert(file, experiment_id=None, user_id=None):
     
     Args:
         file: Flask FileStorage object
-        experiment_id: Required for variant/mutation/activity/control data
+        experiment_id: Required for variant/mutation/activity data
         user_id: Required for experiment data
         
     Returns:
@@ -298,18 +270,6 @@ def process_and_insert(file, experiment_id=None, user_id=None):
                 raise ValueError("No variants found for this experiment")
             
             created = insert_activity_records(records, variant.variant_id)
-            return {
-                'success': True,
-                'data_type': data_type,
-                'count': len(created),
-                'objects': created
-            }
-        
-        elif data_type == 'control':
-            if not experiment_id:
-                raise ValueError("experiment_id required for control data")
-            
-            created = insert_control_records(records, experiment_id)
             return {
                 'success': True,
                 'data_type': data_type,

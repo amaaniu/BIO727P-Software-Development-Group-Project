@@ -33,7 +33,6 @@ class Experiment(db.Model):
     
     # Relationships
     variants = db.relationship('Variant', backref='experiment', lazy='dynamic')
-    controls = db.relationship('ControlData', backref='experiment', lazy='dynamic')
 
 class Variant(db.Model):
     __tablename__ = 'Variant'
@@ -75,14 +74,6 @@ class Activity(db.Model):
     measurement_type = db.Column(db.Text, nullable=False) 
     raw_value = db.Column(db.Float, nullable=False)  
 
-class ControlData(db.Model):
-    __tablename__ = 'Control_Data'  
-    control_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    experiment_id = db.Column(db.Integer, db.ForeignKey('Experiment.experiment_id'), nullable=False)
-    generation = db.Column(db.Integer, nullable=False)  
-    control_type = db.Column(db.Text, nullable=False)  
-    protein_yield = db.Column(db.Float, nullable=False)
-    dna_yield = db.Column(db.Float, nullable=False)
 
 class UniProtData(db.Model):
     __tablename__ = 'UniProt_Data'
