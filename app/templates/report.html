@@ -128,7 +128,7 @@
 
       <!-- Summary FIRST -->
       <div class="mb-4 d-none" id="summaryBlock">
-        <h3 class="h6 mb-2">Summary</h3>
+        <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
         <div id="summaryContent"></div>
       </div>
 
@@ -179,6 +179,7 @@
   const resultsBlock = document.getElementById("resultsBlock");
 
   const summaryBlock = document.getElementById("summaryBlock");
+  const summaryTitle = document.getElementById("summaryTitle");
   const summaryContent = document.getElementById("summaryContent");
 
   const blocks = [
@@ -306,6 +307,7 @@
     }
 
     const accession = summary.accession || "-";
+    const experimentName = escapeHtml(summary.experiment_name || "Summary");
     const proteinName = escapeHtml(summary.protein_name || "Unknown protein");
     const organismName = escapeHtml(summary.organism_name || "Unknown organism");
     const sequenceLength = summary.sequence_length ? `${summary.sequence_length} aa` : "N/A";
@@ -318,14 +320,18 @@
     const alphafoldLink = summary.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${accession}`;
     const viewerId = `alphafold-report-${String(accession).replace(/[^A-Za-z0-9_-]/g, "")}`;
 
+    if (summaryTitle) {
+      summaryTitle.textContent = experimentName;
+    }
+
     summaryContent.innerHTML = `
       <div class="row g-3 align-items-start">
         <div class="col-12 col-lg-6">
-          <div class="h5 mb-3"><strong>${proteinName}</strong></div>
           <div class="uniprot-meta-wrap">
             <div class="table-responsive">
               <table class="table table-sm align-middle mb-0 uniprot-meta-table">
                 <tbody>
+                  <tr><th style="width: 35%;">Protein name</th><td>${proteinName}</td></tr>
                   <tr><th style="width: 35%;">Accession</th><td>${accessionText}</td></tr>
                   <tr><th>Organism</th><td>${organismName}</td></tr>
                   <tr><th>Length</th><td>${escapeHtml(sequenceLength)}</td></tr>

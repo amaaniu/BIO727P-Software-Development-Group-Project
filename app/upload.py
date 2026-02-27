@@ -89,9 +89,9 @@ def api_uniprot():
         db.session.add(experiment)
         db.session.flush()  # Get experiment_id populated
 
-        experiment.experiment_name = f"experiment {experiment.experiment_id}"
+        experiment.experiment_name = f"Experiment {experiment.experiment_id}"
         db.session.commit()
-        
+
         return jsonify({
             "ok": True,
             "experiment_id": experiment.experiment_id,
