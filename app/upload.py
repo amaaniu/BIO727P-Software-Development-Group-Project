@@ -87,7 +87,7 @@ def api_uniprot():
 
         db.session.add(experiment)
         db.session.flush()  # assign autoincrement experiment_id before naming
-        experiment.experiment_name = f"experiment{experiment.experiment_id}"
+        experiment.experiment_name = f"Experiment {experiment.experiment_id}"
         db.session.commit()
 
         return jsonify({
