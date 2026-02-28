@@ -88,17 +88,24 @@ def dashboard():
     if sort_dir not in {'asc', 'desc'}:
         sort_dir = 'desc'
 
-    # 2. Define expressions for sorting and aggregation using SQLAlchemy functions. 
-    # The max_variant_created expression calculates the latest creation timestamp among variants for each experiment, while max_generation computes the highest generation number. The variant_count expression counts the total number of variants associated with each experiment. The last_updated_expr uses the COALESCE function to determine the last updated time for an experiment, defaulting to the experiment's creation time if no variants exist.
-    max_variant_created = func.max(Variant.created_at) 
-    max_generation = func.max(Variant.generation)
-    variant_count = func.count(Variant.variant_id)
-    last_updated_expr = func.coalesce(max_variant_created, Experiment.created_at)
+    # 2. Pre-aggregate variant stats per experiment to guarantee one row per experiment.
+    variant_stats = (
+        db.select(
+            Variant.experiment_id.label('experiment_id'),
+            func.max(Variant.created_at).label('last_variant_at'),
+            func.max(Variant.generation).label('max_generation'),
+            func.count(Variant.variant_id).label('variant_count'),
+        )
+        .group_by(Variant.experiment_id)
+        .subquery()
+    )
+    last_updated_expr = func.coalesce(variant_stats.c.last_variant_at, Experiment.created_at)
+    max_generation_expr = func.coalesce(variant_stats.c.max_generation, 0)
 
     sort_options = {
         'updated': last_updated_expr,
         'name': Experiment.experiment_name,
-        'generation': max_generation,
+        'generation': max_generation_expr,
         'status': Experiment.status,
     }
     sort_expr = sort_options[sort_by]
@@ -112,11 +119,11 @@ def dashboard():
             Experiment.uniprot_id,
             Experiment.status,
             Experiment.created_at,
-            max_variant_created.label('last_variant_at'),
-            max_generation.label('max_generation'),
-            variant_count.label('variant_count'),
+            variant_stats.c.last_variant_at,
+            variant_stats.c.max_generation,
+            func.coalesce(variant_stats.c.variant_count, 0).label('variant_count'),
         )
-        .outerjoin(Variant, Variant.experiment_id == Experiment.experiment_id)
+        .outerjoin(variant_stats, variant_stats.c.experiment_id == Experiment.experiment_id)
         .where(Experiment.user_id == current_user.user_id)
     )
     # Apply search filter if provided
@@ -128,17 +135,8 @@ def dashboard():
                 func.lower(Experiment.uniprot_id).like(pattern),
             )
         )
-    # 4. Groups the query results by experiment attributes and sorts them in the specified order. experiments_query = (
-        experiments_query = (
-        experiments_query.group_by(
-            Experiment.experiment_id,
-            Experiment.experiment_name,
-            Experiment.uniprot_id,
-            Experiment.status,
-            Experiment.created_at,
-        )
-        .order_by(order_clause, Experiment.experiment_id.desc())
-    )
+    # 4. Sorts the per-experiment rows returned from the pre-aggregated subquery.
+    experiments_query = experiments_query.order_by(order_clause, Experiment.experiment_id.desc())
     # 5. Executes the query and processes the results to determine the status of each experiment based on its raw status and variant count. 
     all_experiments = []
     for row in db.session.execute(experiments_query):
@@ -148,7 +146,13 @@ def dashboard():
 
         raw_status = (row.status or '').strip().lower()
         variant_total = int(row.variant_count or 0)
-        if raw_status in ('completed', 'complete', 'done'):
+
+        # Dashboard tracker only shows experiments that have uploaded run data.
+        # Experiments with no variants are treated as not-yet-uploaded and stay out of the tracker table.
+        if variant_total == 0:
+            continue
+
+        if raw_status in {'completed', 'complete', 'done'}:
             status = 'Completed'
         else:
             status = 'In Progress'

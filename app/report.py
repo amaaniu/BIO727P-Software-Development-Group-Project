@@ -140,6 +140,20 @@ def api_run_analysis():
             mutations_inserted += store_analysis_results(v, result)
             analysed += 1
 
+        if analysed == 0:
+            if (exp.status or "").strip().lower() not in {"completed", "complete", "done"}:
+                exp.status = "in_progress"
+            db.session.commit()
+            return jsonify({
+                "ok": False,
+                "error": "Analysis did not process any variants; experiment remains in progress.",
+                "experiment_id": exp.experiment_id,
+                "variants_analysed": analysed,
+                "variants_skipped": skipped,
+                "skip_reasons_preview": skip_reasons,
+                "mutations_inserted": mutations_inserted,
+            }), 400
+
         exp.status = "completed"
         db.session.commit()
 

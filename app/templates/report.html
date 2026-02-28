@@ -200,6 +200,21 @@
     }
   }
 
+  async function fetchWithRetry(url, options = {}, attempts = 2, delayMs = 800) {
+    let lastErr = null;
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        return await fetch(url, options);
+      } catch (err) {
+        lastErr = err;
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    throw lastErr || new Error("Fetch failed");
+  }
+
   function setHtmlWithScripts(target, html) {
     target.innerHTML = "";
     const template = document.createElement("template");
@@ -454,7 +469,7 @@
     let rr;
     const renderUrl = `${renderReportUrl}?experiment_id=${encodeURIComponent(experimentId)}`;
     try {
-      rr = await fetch(renderUrl);
+      rr = await fetchWithRetry(renderUrl);
     } catch (networkErr) {
       const detail = networkErr && networkErr.message ? networkErr.message : String(networkErr);
       throw new Error(`Network error calling ${renderUrl}: ${detail}`);

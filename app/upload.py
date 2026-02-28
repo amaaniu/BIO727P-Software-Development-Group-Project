@@ -75,21 +75,19 @@ def api_uniprot():
             ))
         db.session.commit()
 
-        # 4) Create experiment
-
+        # 4) Create experiment and auto-generate a stable name from its ID.
         experiment = Experiment(
             user_id=current_user.user_id,
-            experiment_name="experiment",
+            experiment_name="",
             uniprot_id=data["uniprot_id"],
             wt_protein_sequence=data["protein_sequence"],
-            status="uniprot_loaded",
+            status="awaiting_data",
             created_at=datetime.utcnow(),
         )
 
         db.session.add(experiment)
-        db.session.flush()  # Get experiment_id populated
-
-        experiment.experiment_name = f"Experiment {experiment.experiment_id}"
+        db.session.flush()  # assign autoincrement experiment_id before naming
+        experiment.experiment_name = f"experiment{experiment.experiment_id}"
         db.session.commit()
 
         return jsonify({
@@ -154,7 +152,7 @@ def api_validate_fasta():
             experiment_id=experiment_id,
             user_id=current_user.user_id,
             plasmid_sequence=dna_seq,
-            status="plasmid_uploaded",
+            status="awaiting_data",
         )
         
         return jsonify({
@@ -208,7 +206,11 @@ def api_upload_data():
             user_id=current_user.user_id
         )
 
-        if experiment_id and result.get("data_type") in {"variant", "mutation", "activity", "control"}:
+        if (
+            experiment_id
+            and result.get("data_type") in {"variant", "mutation", "activity", "control"}
+            and int(result.get("count") or 0) > 0
+        ):
             experiment = Experiment.query.filter_by(
                 experiment_id=experiment_id,
                 user_id=current_user.user_id

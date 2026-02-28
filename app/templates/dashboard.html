@@ -73,9 +73,9 @@
                 <p class="small mb-0">Current and recent directed evolution campaigns</p>
             </div>
             <ul class="nav nav-pills nav-fill bg-light rounded p-1 dashboard-filters" style="font-size: 0.85rem;">
-                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'all' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='all', q=search_query, sort=sort_by, dir=sort_dir) }}">All</a></li>
-                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'in_progress' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='in_progress', q=search_query, sort=sort_by, dir=sort_dir) }}">In Progress</a></li>
-                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'completed' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='completed', q=search_query, sort=sort_by, dir=sort_dir) }}">Completed</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'all' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='all', sort=sort_by, dir=sort_dir) }}">All</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'in_progress' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='in_progress', sort=sort_by, dir=sort_dir) }}">In Progress</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'completed' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='completed', sort=sort_by, dir=sort_dir) }}">Completed</a></li>
             </ul>
         </div>
         <div class="card-body border-bottom py-3">
@@ -105,6 +105,12 @@
                     <button type="submit" class="btn btn-primary btn-sm">Apply</button>
                 </div>
             </form>
+            {% if search_query or status_filter != 'all' %}
+              <div class="small text-muted mt-2">
+                Filtered results are active.
+                <a href="{{ url_for('main.dashboard') }}" class="ms-1">Clear filters</a>
+              </div>
+            {% endif %}
         </div>
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0 dashboard-table">
@@ -142,8 +148,6 @@
                         <td class="col-status">
                           {% if exp.status == 'Completed' %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle">{{ exp.status }}</span>
-                          {% elif not exp.variant_count or exp.variant_count == 0 %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Awaiting Data</span>
                           {% elif exp.status == 'In Progress' %}
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ exp.status }}</span>
                           {% else %}
