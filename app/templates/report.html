@@ -200,7 +200,7 @@
     }
   }
 
-  async function fetchWithRetry(url, options = {}, attempts = 2, delayMs = 800) {
+  async function fetchWithRetry(url, options = {}, attempts = 2, delayMs = 2000) {
     let lastErr = null;
     for (let i = 0; i < attempts; i += 1) {
       try {
