@@ -585,8 +585,15 @@
     }
   });
 
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      resetAll("");
+    }
+  });
+
   // init clean
   resetAll("");
 </script>
 
 {% endblock %}
+

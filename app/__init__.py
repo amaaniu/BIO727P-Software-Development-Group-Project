@@ -26,7 +26,7 @@ def create_app():
     login_manager.init_app(app)  # Initialises Flask-Login with the Flask application
     login_manager.login_view = 'auth.login'  # Set the login view for Flask-Login
    
-    from .models import User, Experiment, Variant, Mutations, Activity  # Import the User model and other models
+    from .models import User, Experiment, Variant, Mutations # Import the User model and other models
     
     @login_manager.user_loader
     def load_user(user_id):

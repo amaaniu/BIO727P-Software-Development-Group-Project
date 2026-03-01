@@ -52,7 +52,6 @@ class Variant(db.Model):
     
     # Relationships
     mutations = db.relationship('Mutations', backref='variant', lazy='dynamic')
-    activities = db.relationship('Activity', backref='variant', lazy='dynamic')
     parent = db.relationship('Variant', remote_side=[variant_id], backref='children')
 
 class Mutations(db.Model):
@@ -65,14 +64,6 @@ class Mutations(db.Model):
     mutation_type = db.Column(db.Text, nullable=False)
     generation = db.Column(db.Integer, nullable=False)
     codon_change = db.Column(db.Text)
-
-class Activity(db.Model):
-    __tablename__ = 'Activity'
-    activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'), nullable=False)
-    qc_pass = db.Column(db.Integer, nullable=False)  
-    measurement_type = db.Column(db.Text, nullable=False) 
-    raw_value = db.Column(db.Float, nullable=False)  
 
 
 class UniProtData(db.Model):

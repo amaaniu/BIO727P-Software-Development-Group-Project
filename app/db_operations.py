@@ -1,6 +1,6 @@
 # db_operations.py
 
-from app.models import db, Experiment, Variant, Mutations, Activity, UniProtData, UniProtFeature
+from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
 from datetime import datetime
 import json
 
@@ -166,34 +166,6 @@ def insert_mutation_records(records, variant_id):
     return mutation_objects
 
 
-def insert_activity_records(records, variant_id):
-    """
-    Insert activity records into database.
-    `
-    Args:
-        records: List of activity dicts from file_processor
-        variant_id: ID of variant these activities belong to
-        
-    Returns:
-        List of created Activity objects
-    """
-    activity_objects = []
-    
-    for record in records:
-        activity = Activity(
-            variant_id=variant_id,
-            qc_pass=record.get('qc_pass', 1), 
-            measurement_type=record['measurement_type'],
-            raw_value=record['raw_value']
-        )
-        
-        db.session.add(activity)
-        activity_objects.append(activity)
-    
-    db.session.commit()
-    return activity_objects
-
-
 
 def process_and_insert(file, experiment_id=None, user_id=None):
     """
@@ -260,22 +232,6 @@ def process_and_insert(file, experiment_id=None, user_id=None):
                 'objects': created
             }
         
-        elif data_type == 'activity':
-            if not experiment_id:
-                raise ValueError("experiment_id required for activity data")
-            
-            
-            variant = Variant.query.filter_by(experiment_id=experiment_id).first()
-            if not variant:
-                raise ValueError("No variants found for this experiment")
-            
-            created = insert_activity_records(records, variant.variant_id)
-            return {
-                'success': True,
-                'data_type': data_type,
-                'count': len(created),
-                'objects': created
-            }
     
     except Exception as e:
         db.session.rollback()
