@@ -129,7 +129,9 @@
                 {% if experiments %}
                   {% for exp in experiments %}
                     <tr>
-                        <td class="ps-4 col-exp">{{ exp.experiment_name }}</td>
+                        <td class="ps-4 col-exp">
+                          <div>{{ exp.experiment_name }}</div>
+                        </td>
                         <td class="col-id"><code class="text-primary fw-bold">{{ exp.uniprot_id }}</code></td>
                         <td class="d-none d-md-table-cell">
                           {% if exp.variant_count and exp.variant_count > 0 %}

@@ -2,8 +2,9 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
-from app.models import Experiment, UniProtData, UniProtFeature, db
+from app.models import Experiment, UniProtData, UniProtFeature, Variant, db
 from app.db_operations import process_and_insert, update_experiment_plasmid
 from app.uploads.file_handling import process_file
 from app.uploads.orf_translation import six_frame_orfs
@@ -75,19 +76,41 @@ def api_uniprot():
             ))
         db.session.commit()
 
-        # 4) Create experiment and auto-generate a stable name from its ID.
-        experiment = Experiment(
-            user_id=current_user.user_id,
-            experiment_name="",
-            uniprot_id=data["uniprot_id"],
-            wt_protein_sequence=data["protein_sequence"],
-            status="awaiting_data",
-            created_at=datetime.utcnow(),
+        # 4) Reuse a draft experiment (awaiting_data with no variants) if one exists.
+        # This avoids creating extra experiment IDs when users restart staging.
+        experiment = (
+            db.session.query(Experiment)
+            .outerjoin(Variant, Variant.experiment_id == Experiment.experiment_id)
+            .filter(
+                Experiment.user_id == current_user.user_id,
+                func.lower(func.coalesce(Experiment.status, "")) == "awaiting_data",
+            )
+            .group_by(Experiment.experiment_id)
+            .having(func.count(Variant.variant_id) == 0)
+            .order_by(Experiment.experiment_id.desc())
+            .first()
         )
 
-        db.session.add(experiment)
-        db.session.flush()  # assign autoincrement experiment_id before naming
-        experiment.experiment_name = f"Experiment {experiment.experiment_id}"
+        if experiment:
+            experiment.uniprot_id = data["uniprot_id"]
+            experiment.wt_protein_sequence = data["protein_sequence"]
+            experiment.plasmid_sequence = None
+            experiment.status = "awaiting_data"
+            if not (experiment.experiment_name or "").strip():
+                experiment.experiment_name = f"Experiment {experiment.experiment_id}"
+        else:
+            experiment = Experiment(
+                user_id=current_user.user_id,
+                experiment_name="",
+                uniprot_id=data["uniprot_id"],
+                wt_protein_sequence=data["protein_sequence"],
+                status="awaiting_data",
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(experiment)
+            db.session.flush()  # assign autoincrement experiment_id before naming
+            experiment.experiment_name = f"Experiment {experiment.experiment_id}"
+
         db.session.commit()
 
         return jsonify({
