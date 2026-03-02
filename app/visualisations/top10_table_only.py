@@ -1,8 +1,15 @@
 """
 Top-performer variants table.
 
-Required output:
-- A top 10 table sorted by the unified activity metric, including essential fields and mutation count. 
+Produces a top 10 ranking of variants based on the
+log2-transformed activity score.
+
+The top 10 table is used to:
+- Identify the highest-performing variants
+- Select a representative variant for downstream visualisations
+  (e.g. mutation fingerprint)
+
+Explicit tie-breakers are applied when activity scores are identical.
 """
 
 from __future__ import annotations
@@ -10,6 +17,7 @@ from __future__ import annotations
 from typing import Final, List
 
 import pandas as pd
+
 
 REQUIRED_COLS: Final[List[str]] = [
     "variant_id",
@@ -23,33 +31,65 @@ REQUIRED_COLS: Final[List[str]] = [
 
 def compute_top10(variants_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute the top 10 variants by Activity Score (log2).
+    Compute the top 10 variants ranked by activity score (log2).
 
-    Parameters
-    ----------
-    variants_df:
-        Variants dataframe containing at least REQUIRED_COLS.
+    Args:
+    
+    variants_df : pandas.DataFrame
+        DataFrame containing variant-level data. Must include
+        at least the columns listed in REQUIRED_COLS.
 
-    Returns
-    -------
+    Returns:
+    
     pandas.DataFrame
-        Top 10 rows, sorted descending by activity_score_log2.
+        A dataframe containing the top 10 ranked variants,
+        sorted deterministically by:
+
+        1. activity_score_log2 (descending)
+        2. generation (descending)
+        3. variant_id (ascending)
+
+        Deterministic tie-breaking ensures stable behaviour across
+        repeated analysis runs and prevents random switching of the
+        selected top variant in downstream visualisations.
 
     Raises
     ------
     ValueError
-        If required columns are missing.
+        If required columns are missing from the input dataframe.
+
+    Notes
+    -----
+    - activity_score_log2 values are coerced to numeric to ensure
+      robustness against mixed-type inputs.
+    - Rows with missing activity scores are excluded.
+    - A stable sorting algorithm (mergesort) is used to preserve
+      reproducibility when ties occur.
     """
+
+    # ---- Validation ----
     missing = set(REQUIRED_COLS) - set(variants_df.columns)
     if missing:
         raise ValueError(f"Missing required columns for top10: {sorted(missing)}")
 
+    df = variants_df[REQUIRED_COLS].copy()
+
+    # ---- Ensure numeric activity score ----
+    df["activity_score_log2"] = pd.to_numeric(
+        df["activity_score_log2"],
+        errors="coerce",
+    )
+
+    # Remove rows without valid scores
+    df = df.dropna(subset=["activity_score_log2"])
+
+    # ---- Deterministic sorting ----
     top10 = (
-        variants_df[REQUIRED_COLS]
-        .copy()
-        .assign(activity_score_log2=pd.to_numeric(variants_df["activity_score_log2"], errors="coerce"))
-        .dropna(subset=["activity_score_log2"])
-        .sort_values("activity_score_log2", ascending=False)
+        df.sort_values(
+            by=["activity_score_log2", "generation", "variant_id"],
+            ascending=[False, False, True],
+            kind="mergesort",  # stable sorting for reproducibility
+        )
         .head(10)
         .reset_index(drop=True)
     )
