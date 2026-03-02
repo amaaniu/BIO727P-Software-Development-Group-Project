@@ -30,7 +30,7 @@ from app.visualisations.activity_landscape import plot_activity_landscape_3d
 # IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
 
-@report_bp.get("report/<int:experiment_id>")
+@report_bp.get("/<int:experiment_id>")
 @login_required
 def view_report(experiment_id: int):
     exp = Experiment.query.filter_by(

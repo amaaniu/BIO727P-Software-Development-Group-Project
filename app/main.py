@@ -210,13 +210,20 @@ def view_report(experiment_id):
     )
     if experiment is None:
         abort(404)
-    return redirect(url_for('report.report_page', experiment_id=experiment_id))
+    return redirect(url_for('report.view_report', experiment_id=experiment_id))
 
 @main_bp.route('/experiments/<int:experiment_id>/download_pdf')
 @login_required
 def download_pdf(experiment_id):
-    # Placeholder route for downloading a PDF report for an experiment owned by the logged-in user.
-    return f"Download PDF report for experiment {experiment_id} (functionality not implemented yet)"
+    experiment = db.session.scalar(
+        db.select(Experiment).where(
+            Experiment.experiment_id == experiment_id,
+            Experiment.user_id == current_user.user_id,
+        )
+    )
+    if experiment is None:
+        abort(404)
+    return redirect(url_for('report.download_report_pdf', experiment_id=experiment_id))
 
 @main_bp.route('/experiments/new')
 @login_required

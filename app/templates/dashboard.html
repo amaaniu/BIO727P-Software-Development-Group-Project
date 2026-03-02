@@ -161,12 +161,12 @@
                           <div class="dashboard-actions d-inline-flex gap-2">
                             {% set action_label = 'Run Analysis' if exp.status == 'In Progress' else 'View Report' %}
                             {% if exp.experiment_id is defined and exp.experiment_id %}
-                              <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">{{ action_label }}</a>
+                              <a href="{{ url_for('run_analysis.analysis_page', experiment_id=exp.experiment_id) if exp.status == 'In Progress' else url_for('report.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">{{ action_label }}</a>
                             {% else %}
-                              <button type="button" class="btn btn-sm btn-outline-secondary" disabled>{{ action_label }}</button>
+                              <button type="button" class="btn btn-sm btn-outline-success" disabled>{{ action_label }}</button>
                             {% endif %}
                             {% if exp.status == 'Completed' %}
-                              <button type="button" class="btn btn-sm btn-outline-primary" disabled>Download PDF</button>
+                              <a href="{{ url_for('report.download_report_pdf', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">Download PDF</a>
                             {% endif %}
                           </div>
                         </td>
