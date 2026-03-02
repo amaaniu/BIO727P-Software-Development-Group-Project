@@ -11,7 +11,6 @@ import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
-from playwright.sync_api import sync_playwright
 from sqlalchemy import func
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
@@ -48,7 +47,7 @@ def api_summary():
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
-    
+
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
@@ -237,7 +236,7 @@ def api_render_report():
             viz4 = _fig_to_payload(
                 plot_mutation_fingerprint(
                     mutations_df,
-                    variant_id=selected_variant_id,
+                    protein_length=protein_length,
                     title=f"Mutation fingerprint (variant {selected_variant_id})",
                 )
             )
@@ -273,6 +272,18 @@ def api_render_report():
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
+    try:
+        from playwright.sync_api import sync_playwright
+    except ModuleNotFoundError:
+        abort(
+            503,
+            description=(
+                "PDF export requires Playwright. Install it with "
+                "'pip install playwright' and then run "
+                "'playwright install chromium'."
+            ),
+        )
+
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
