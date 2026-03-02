@@ -117,7 +117,7 @@ def insert_variant_records(records, experiment_id):
             experiment_id=experiment_id,
             generation=int(record["generation"]),
             plasmid_variant_index=str(record["plasmid_variant_index"]),
-            parent_variant_id=record.get("parent_variant_id"),
+            parent_variant_id=None,
             dna_sequence=record["dna_sequence"],
             protein_sequence=record.get("protein_sequence"),  # optional if TSV has it
             protein_yield=float(record["protein_yield"]),
@@ -140,6 +140,9 @@ def insert_variant_records(records, experiment_id):
         gen = variant.generation
 
         parent_index = record.get("parent_plasmid_variant")
+        if parent_index is None:
+            # Backward compatibility for payloads normalized before parent_plasmid_variant existed.
+            parent_index = record.get("parent_variant_id")
 
         if gen <= 1 or not parent_index:
             variant.parent_variant_id = None

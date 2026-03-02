@@ -52,10 +52,12 @@ COLUMN_NAME_MAP = {
     'number_of_mutations': 'mutation_count',
     'num_mutations': 'mutation_count',
     'total_mutations': 'mutation_count',
-    # parent_variant_id  (not in VARIANT_REQUIRED but useful to capture)
-    'parent_plasmid_variant': 'parent_variant_id',
-    'parent_variant': 'parent_variant_id',
-    'parent': 'parent_variant_id',
+    # parent reference from previous generation's plasmid index
+    'parent_plasmid_variant': 'parent_plasmid_variant',
+    'parent_variant': 'parent_plasmid_variant',
+    'parent': 'parent_plasmid_variant',
+    # common user-provided name; treated as parent plasmid index input
+    'parent_variant_id': 'parent_plasmid_variant',
 
     # --- Experiment fields ---
     # experiment_name
@@ -176,7 +178,7 @@ CONTROL_REQUIRED = {'control_type', 'generation', 'protein_yield', 'dna_yield'}
 
 # All fields for each data type
 EXPERIMENT_FIELDS = ['experiment_name', 'uniprot_id', 'wt_protein_sequence', 'protein_features', 'plasmid_sequence', 'status']
-VARIANT_FIELDS = ['generation', 'plasmid_variant_index', 'dna_sequence', 'protein_sequence', 'protein_yield', 'dna_yield', 'activity_score', 'mutation_count']
+VARIANT_FIELDS = ['generation', 'plasmid_variant_index', 'parent_plasmid_variant', 'dna_sequence', 'protein_sequence', 'protein_yield', 'dna_yield', 'activity_score', 'mutation_count']
 MUTATION_FIELDS = ['position', 'wt_residue', 'mutant_residue', 'mutation_type', 'generation', 'codon_change']
 ACTIVITY_FIELDS = ['measurement_type', 'raw_value', 'qc_pass']  
 CONTROL_FIELDS = ['generation', 'control_type', 'protein_yield', 'dna_yield']  
