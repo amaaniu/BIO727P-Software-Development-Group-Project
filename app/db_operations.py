@@ -70,6 +70,8 @@ def insert_uniprot_feature_records(records, uniprot_id):
     """
     feature_objects = []
 
+    UniProtFeature.query.filter_by(uniprot_id=uniprot_id).delete()
+
     for record in records:
         feature = UniProtFeature(
             uniprot_id=uniprot_id,

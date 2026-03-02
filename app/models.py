@@ -80,6 +80,16 @@ class UniProtData(db.Model):
 
 class UniProtFeature(db.Model):
     __tablename__ = 'UniProt_Feature'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'uniprot_id',
+            'feature_type',
+            'start_pos',
+            'end_pos',
+            'description',
+            name='uq_uniprot_feature_identity',
+        ),
+    )
 
     feature_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uniprot_id = db.Column(db.Text, db.ForeignKey('UniProt_Data.uniprot_id'), nullable=False)

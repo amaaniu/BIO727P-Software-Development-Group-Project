@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+  id="reportPage"
+  class="container py-4"
+  data-experiment-id="{{ experiment_id }}"
+  data-run-analysis-url="{{ url_for('run_analysis.api_run_analysis') }}"
+  data-view-report-url="{{ url_for('report.view_report', experiment_id=experiment_id) }}"
+>
+  <div class="text-center">
+      <span class="section-badge section-badge-accent">RUNNING ANALYSIS</span>
+      <h2>Analysis</h2>
+    </div>
+
+  <!-- STATUS -->
+  <div id="statusBlock" class="card mb-4">
+    <div class="card-body">
+      <h3 id="statusTitle" class="h5 mb-2">Analysis in progress…</h3>
+      <p id="statusText" class="text-muted mb-3">
+        Please wait while we generate your report.
+      </p>
+
+      <div class="progress" style="height: 18px;">
+        <div id="progressBar"
+             class="progress-bar progress-bar-striped progress-bar-animated"
+             role="progressbar"
+             style="width: 0%;"
+             aria-valuenow="0"
+             aria-valuemin="0"
+             aria-valuemax="100"></div>
+      </div>
+      <small id="progressLabel" class="text-muted d-block mt-2">0%</small>
+    </div>
+  </div>
+</div>
+
+<script>
+  const pageEl = document.getElementById("reportPage");
+  const experimentId = Number(pageEl?.dataset?.experimentId);
+  const runAnalysisUrl = pageEl?.dataset?.runAnalysisUrl || "/report/api/run-analysis";
+  const viewReportUrl = pageEl?.dataset?.viewReportUrl || "/report/" + String(experimentId);
+
+  const bar = document.getElementById("progressBar");
+  const label = document.getElementById("progressLabel");
+  const title = document.getElementById("statusTitle");
+  const text = document.getElementById("statusText");
+
+  async function parseJsonResponse(response, fallbackMessage) {
+    const text = await response.text();
+    try { return JSON.parse(text); }
+    catch {
+      const snippet = text ? text.slice(0, 120) : "";
+      throw new Error(`${fallbackMessage}. Server returned non-JSON: ${snippet}`);
+    }
+  }
+
+  function setPct(pct) {
+    bar.style.width = pct + "%";
+    bar.setAttribute("aria-valuenow", String(pct));
+    label.textContent = pct + "%";
+  }
+
+  // Fake progress (unchanged)
+  let fakePct = 0;
+  const startTs = Date.now();
+  const phase1Ms = 25_000;
+  const phase2Ms = 10_000;
+  const maxFakePct = 97;
+
+  const fakeTimer = setInterval(() => {
+    const elapsed = Date.now() - startTs;
+    let nextPct = fakePct;
+
+    if (elapsed <= phase1Ms) {
+      const t = elapsed / phase1Ms;
+      nextPct = Math.floor(92 * t);
+    } else if (elapsed <= (phase1Ms + phase2Ms)) {
+      const t = (elapsed - phase1Ms) / phase2Ms;
+      nextPct = 93 + Math.floor(5 * t);
+    } else {
+      nextPct = maxFakePct;
+    }
+
+    if (nextPct > maxFakePct) nextPct = maxFakePct;
+    if (nextPct < fakePct) nextPct = fakePct;
+
+    fakePct = nextPct;
+    setPct(fakePct);
+  }, 100);
+
+  async function runAnalysis() {
+    if (!Number.isFinite(experimentId)) throw new Error("Missing or invalid experiment ID.");
+
+    // 1) Trigger analysis (writes results to DB)
+    const res = await fetch(runAnalysisUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ experiment_id: experimentId })
+    });
+
+    const data = await parseJsonResponse(res, "Analysis request failed");
+    if (!res.ok || !data.ok) throw new Error(data.error || "Analysis failed");
+
+    // 2) Mark complete UI
+    clearInterval(fakeTimer);
+    setPct(100);
+
+    title.textContent = "Analysis complete";
+    text.textContent = "Opening report…";
+
+    bar.classList.remove("progress-bar-animated");
+    bar.classList.remove("progress-bar-striped");
+
+    // 3) Redirect to clean report view (NO results rendered on this page)
+    window.location.href = viewReportUrl;
+  }
+
+  runAnalysis().catch(err => {
+    clearInterval(fakeTimer);
+    bar.classList.remove("progress-bar-animated");
+    bar.classList.remove("progress-bar-striped");
+
+    title.textContent = "Analysis failed";
+    text.textContent = err.message || "Something went wrong.";
+    setPct(100);
+  });
+</script>
+{% endblock %}
