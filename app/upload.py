@@ -65,7 +65,8 @@ def api_uniprot():
             existing.protein_sequence = data["protein_sequence"]
         db.session.commit()
 
-        # 3) Store features (and commit them)
+        # 3) Replace features for this accession so repeated fetches do not duplicate rows.
+        UniProtFeature.query.filter_by(uniprot_id=data["uniprot_id"]).delete()
         for f in data.get("features", []):
             db.session.add(UniProtFeature(
                 uniprot_id=data["uniprot_id"],

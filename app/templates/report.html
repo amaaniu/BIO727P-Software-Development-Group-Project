@@ -44,8 +44,37 @@
     color: var(--color-foreground);
   }
 
+#reportPage .btn-outline-primary {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+#reportPage .btn-outline-primary:hover,
+#reportPage .btn-outline-primary:focus {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+
+}
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
+}
+
+
   .alphafold-wrap {
     min-height: 360px;
+    text-align: left;
+  }
+
+  .alphafold-caption {
+    margin-top: 0.5rem;
+    text-align: left;
+  }
+
+  #summaryTitle {
+    font-size: 1.35rem;
+    font-weight: 700;
   }
 
   .feature-meta-wrap {
@@ -90,12 +119,31 @@
     color: var(--color-foreground);
   }
 
+  .plot-print-image {
+    display: none;
+  }
+
+  .report-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .summary-two-col {
+    align-items: flex-start;
+  }
+
   @media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
   /* remove nav/footer/buttons in PDF */
   nav, footer, .navbar, #downloadPdfBtn, .btn { display: none !important; }
 
   /* use the whole page width */
-  body { margin: 0 !important; }
+  html, body { margin: 0 !important; padding: 0 !important; }
+  main { margin: 0 !important; padding: 0 !important; }
   .container, .container-fluid {
     max-width: 100% !important;
     width: 100% !important;
@@ -103,10 +151,70 @@
     padding-right: 0 !important;
   }
 
+  #reportPage {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  #resultsBlock {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #resultsBlock > .card-body {
+    padding: 0 !important;
+  }
+
   /* avoid ugly splits */
-  .card, .uniprot-meta-wrap, .feature-meta-wrap, .plotly-graph-div {
+  .report-section, .uniprot-meta-wrap, .feature-meta-wrap {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .plotly-graph-div, .js-plotly-plot, .plot-container, .svg-container {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    max-width: 100% !important;
+  }
+
+  .plotly-graph-div img {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+  }
+
+  .summary-two-col {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 1rem;
+  }
+
+  .summary-two-col > .summary-col {
+    flex: 0 0 calc(50% - 0.5rem);
+    max-width: calc(50% - 0.5rem);
+    width: calc(50% - 0.5rem);
+  }
+
+  .plot-print-image {
+    display: block !important;
+  }
+
+  .plot-print-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+  }
+
+  #viz5Block .plot-print-image img {
+    width: 70%;
+    max-width: 70%;
+    margin: 0 auto;
+  }
+
+  [data-has-print-image="true"] {
+    display: none !important;
   }
 
   /* better colour fidelity */
@@ -121,48 +229,13 @@
   data-experiment-id="{{ experiment_id }}"
   data-render-report-url="{{ url_for('report.api_render_report') }}"
 >
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="mb-0">Report</h1>
 
-    {# optional: add a PDF button later when the pdf blueprint exists #}
-  </div>
-
-  <!-- RESULTS -->
-  <div id="resultsBlock" class="card">
-    <div class="card-body">
-      <h2 class="h5 mb-3">Report</h2>
-
-      <div class="mb-4 d-none" id="summaryBlock">
-        <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
-        <div id="summaryContent"></div>
-      </div>
-
-      <div class="mb-4 d-none" id="viz1Block">
-        <h3 class="h6 mb-2">Visualisation 1</h3>
-        <div id="viz1"></div>
-      </div>
-
-      <div class="mb-4 d-none" id="viz2Block">
-        <h3 class="h6 mb-2">Visualisation 2</h3>
-        <div id="viz2"></div>
-      </div>
-
-      <div class="mb-4 d-none" id="viz3Block">
-        <h3 class="h6 mb-2">Visualisation 3</h3>
-        <div id="viz3"></div>
-      </div>
-
-      <div class="mb-4 d-none" id="viz4Block">
-        <h3 class="h6 mb-2">Visualisation 4</h3>
-        <div id="viz4"></div>
-      </div>
-
-      <div class="mb-4 d-none" id="viz5Block">
-        <h3 class="h6 mb-2">Visualisation 5</h3>
-        <div id="viz5"></div>
-      </div>
+  <div class="text-center">
+      <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
+      <h1>Report</h1>
     </div>
-  </div>
+
+  <div class="d-flex justify-content-end mb-3">
   <a
     id="downloadPdfBtn"
     class="btn btn-outline-primary"
@@ -170,6 +243,43 @@
   >
     Download PDF
   </a>
+  </div>
+    
+  <!-- RESULTS -->
+  <div id="resultsBlock" class="card">
+    <div class="card-body">
+
+      <div class="mb-4 d-none report-section" id="summaryBlock">
+        <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
+        <div id="summaryContent"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz1Block">
+        <h3 class="h6 mb-2">Visualisation 1</h3>
+        <div id="viz1"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz2Block">
+        <h3 class="h6 mb-2">Visualisation 2</h3>
+        <div id="viz2"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz3Block">
+        <h3 class="h6 mb-2">Visualisation 3</h3>
+        <div id="viz3"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz4Block">
+        <h3 class="h6 mb-2">Visualisation 4</h3>
+        <div id="viz4"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz5Block">
+        <h3 class="h6 mb-2">Visualisation 5</h3>
+        <div id="viz5"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -177,6 +287,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
+  window.__REPORT_READY__ = false;
+
   const pageEl = document.getElementById("reportPage");
   const experimentId = Number(pageEl?.dataset?.experimentId);
   const renderReportUrl = pageEl?.dataset?.renderReportUrl || "/report/api/render-report";
@@ -306,6 +418,39 @@
     }
   }
 
+  function isThreeDimensionalFigure(fig) {
+    const traces = Array.isArray(fig?.data) ? fig.data : [];
+    return traces.some((trace) => {
+      const type = String(trace?.type || "").toLowerCase();
+      return ["surface", "scatter3d", "mesh3d", "cone", "streamtube", "volume", "isosurface"].includes(type);
+    });
+  }
+
+  async function attachPrintImage(target, fig) {
+    if (!window.Plotly) return;
+
+    const existing = target.parentElement?.querySelector(".plot-print-image");
+    if (existing) existing.remove();
+
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const dataUrl = await Plotly.toImage(target, {
+        format: "png",
+        width: 1200,
+        height: 800,
+        scale: 2,
+      });
+
+      const wrap = document.createElement("div");
+      wrap.className = "plot-print-image";
+      wrap.innerHTML = `<img src="${dataUrl}" alt="Static plot preview" />`;
+      target.parentElement?.appendChild(wrap);
+      target.setAttribute("data-has-print-image", "true");
+    } catch (_) {
+      target.removeAttribute("data-has-print-image");
+    }
+  }
+
   async function renderSummary(summary) {
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
@@ -329,12 +474,28 @@
     const accessionText = escapeHtml(accession);
     const alphafoldLink = summary.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${accession}`;
     const viewerId = `alphafold-report-${String(accession).replace(/[^A-Za-z0-9_-]/g, "")}`;
+    const features = Array.isArray(summary.features) ? summary.features : [];
+    const maxFeatureRows = 10;
+    const visibleFeatures = features.slice(0, maxFeatureRows);
+    const featureRowsHtml = visibleFeatures.length
+      ? visibleFeatures.map((feature) => `
+          <tr>
+            <td>${escapeHtml(feature.feature_type || "")}</td>
+            <td>${escapeHtml(feature.start_pos ?? "")}</td>
+            <td>${escapeHtml(feature.end_pos ?? "")}</td>
+            <td>${escapeHtml(feature.description || "")}</td>
+          </tr>
+        `).join("")
+      : `<tr><td colspan="4" class="text-muted">No features returned.</td></tr>`;
+    const featureCountText = features.length > maxFeatureRows
+      ? `Showing ${maxFeatureRows} of ${features.length} features.`
+      : `Features: ${features.length}`;
 
     if (summaryTitle) summaryTitle.textContent = experimentName;
 
     summaryContent.innerHTML = `
-      <div class="row g-3 align-items-start">
-        <div class="col-12 col-lg-6">
+      <div class="row g-3 summary-two-col">
+        <div class="col-12 col-lg-6 summary-col">
           <div class="uniprot-meta-wrap">
             <div class="table-responsive">
               <table class="table table-sm align-middle mb-0 uniprot-meta-table">
@@ -351,12 +512,31 @@
             </div>
           </div>
         </div>
-        <div class="col-12 col-lg-6">
-          <div class="small fw-bold mb-2 mt-2">AlphaFold Preview</div>
-          <div class="alphafold-wrap mt-2">
+        <div class="col-12 col-lg-6 summary-col">
+          <div class="alphafold-wrap">
             <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
+            <div class="small fw-bold alphafold-caption">AlphaFold Preview</div>
             <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
           </div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h4 class="h6 mb-0">Features</h4>
+          <div class="small text-muted">${escapeHtml(featureCountText)}</div>
+        </div>
+        <div class="table-responsive feature-meta-wrap">
+          <table class="table table-sm align-middle mb-0 feature-meta-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>${featureRowsHtml}</tbody>
+          </table>
         </div>
       </div>
     `;
@@ -369,13 +549,16 @@
     );
   }
 
-  function renderViz(target, payload) {
+  async function renderViz(target, payload) {
     if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
       target.innerHTML = "";
       const fig = payload.figure || {};
       try {
-        Plotly.newPlot(target, fig.data || [], fig.layout || {}, { responsive: true, displayModeBar: true });
+        await Plotly.newPlot(target, fig.data || [], fig.layout || {}, { responsive: true, displayModeBar: true });
         requestAnimationFrame(() => Plotly.Plots.resize(target));
+        if (isThreeDimensionalFigure(fig)) {
+          await attachPrintImage(target, fig);
+        }
       } catch (err) {
         const msg = (err && err.message) ? err.message : String(err);
         target.innerHTML = `<p class='text-danger'>Plot render failed: ${msg}</p>`;
@@ -394,20 +577,23 @@
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
-    // show summary FIRST
-    await renderSummary(out.summary);
+    // show summary before creating the AlphaFold viewer so 3Dmol can measure the container
     summaryBlock.classList.remove("d-none");
+    await renderSummary(out.summary);
 
     // then visuals
     const viz = out.viz || {};
     for (const item of blocks) {
       item.block.classList.remove("d-none");
-      renderViz(item.el, viz[item.key]);
+      await renderViz(item.el, viz[item.key]);
       await new Promise(r => setTimeout(r, 250));
     }
+
+    window.__REPORT_READY__ = true;
   }
 
   loadReport().catch(err => {
+    window.__REPORT_READY__ = "error";
     // if someone hits view before analysis exists, you can show a friendly message
     resultsBlock.querySelector(".card-body").insertAdjacentHTML(
       "afterbegin",

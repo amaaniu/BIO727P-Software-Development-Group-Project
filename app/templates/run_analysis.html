@@ -7,12 +7,15 @@
   data-run-analysis-url="{{ url_for('run_analysis.api_run_analysis') }}"
   data-view-report-url="{{ url_for('report.view_report', experiment_id=experiment_id) }}"
 >
-  <h1 class="mb-3">Analysis</h1>
+  <div class="text-center">
+      <span class="section-badge section-badge-accent">RUNNING ANALYSIS</span>
+      <h2>Analysis</h2>
+    </div>
 
   <!-- STATUS -->
   <div id="statusBlock" class="card mb-4">
     <div class="card-body">
-      <h2 id="statusTitle" class="h5 mb-2">Analysis in progress…</h2>
+      <h3 id="statusTitle" class="h5 mb-2">Analysis in progress…</h3>
       <p id="statusText" class="text-muted mb-3">
         Please wait while we generate your report.
       </p>

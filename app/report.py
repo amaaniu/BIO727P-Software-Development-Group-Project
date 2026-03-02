@@ -2,18 +2,19 @@
 """
 
 """
-
 from __future__ import annotations
+from urllib.parse import urlparse
 
+from flask import Response, abort, request, url_for
+from app.models import Experiment, UniProtData, UniProtFeature
 import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
-from urllib.parse import urlparse
-from flask import Response, url_for, abort
 from playwright.sync_api import sync_playwright
+from sqlalchemy import func
 # DB models
-from app.models import db, Experiment, Variant, Mutations, UniProtData
+from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
 from app.db_operations import store_analysis_results
 from app.analysis.analysis import analyse_variant
 from app.visualisations.data_sources import get_variants, get_mutations
@@ -143,7 +144,12 @@ def api_render_report():
             .tolist()
         )
 
-    uniprot = UniProtData.query.filter_by(uniprot_id=exp.uniprot_id).first()
+    normalized_uniprot_id = (exp.uniprot_id or "").strip().upper()
+    uniprot = (
+        UniProtData.query
+        .filter(func.upper(func.trim(UniProtData.uniprot_id)) == normalized_uniprot_id)
+        .first()
+    )
     protein_length = (
         getattr(uniprot, "protein_length", None)
         or len((getattr(exp, "wt_protein_sequence", "") or "").strip())
@@ -162,6 +168,20 @@ def api_render_report():
         alphafold_img = None
         alphafold_pdb_url = None
 
+    features = [
+        {
+            "feature_type": feature.feature_type,
+            "start_pos": feature.start_pos,
+            "end_pos": feature.end_pos,
+            "description": feature.description,
+        }
+        for feature in (
+            UniProtFeature.query
+            .filter(func.upper(func.trim(UniProtFeature.uniprot_id)) == normalized_uniprot_id)
+            .order_by(UniProtFeature.start_pos.asc(), UniProtFeature.end_pos.asc(), UniProtFeature.feature_id.asc())
+            .all()
+        )
+    ]
     summary = {
         "experiment_name": getattr(exp, "experiment_name", None),
         "accession": exp.uniprot_id,
@@ -174,6 +194,7 @@ def api_render_report():
         "alphafold_link": alphafold_link,
         "alphafold_img": alphafold_img,
         "alphafold_pdb_url": alphafold_pdb_url,
+        "features": features,
     }
 
     # ---- 1) Top 10 table ----
@@ -247,6 +268,8 @@ def api_render_report():
         "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5}
     })
 
+
+
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
@@ -258,56 +281,91 @@ def download_report_pdf(experiment_id: int):
         abort(404, description="Experiment not found")
 
     report_url = url_for("report.view_report", experiment_id=experiment_id, _external=True)
+    parsed_report_url = urlparse(report_url)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 1800})
+        context = browser.new_context(viewport={"width": 1280, "height": 1800})
 
-        page.goto(report_url, wait_until="domcontentloaded")
+        # Copy Flask session cookies into Playwright so the PDF request is authenticated
+        session_cookies = [
+            {
+                "name": name,
+                "value": value,
+                "domain": parsed_report_url.hostname,
+                "path": "/",
+                "secure": parsed_report_url.scheme == "https",
+            }
+            for name, value in request.cookies.items()
+        ]
+        if session_cookies:
+            context.add_cookies(session_cookies)
 
-        # Wait for your JS to finish rendering (you add window.__REPORT_READY__ in report.html)
+        page = context.new_page()
+
+        # Load the report page and wait for network to settle
+        page.goto(report_url, wait_until="networkidle")
+
+        # Wait for your JS to finish rendering (set in report.html)
         page.wait_for_function(
             "() => window.__REPORT_READY__ === true || window.__REPORT_READY__ === 'error'",
             timeout=90_000
         )
 
-        # If you want to fail fast on errors instead of printing an error PDF:
+        # Optional: fail fast (or still generate an error PDF)
         state = page.evaluate("() => window.__REPORT_READY__")
         if state == "error":
-            # still generate PDF of error state OR raise
+            # You can raise here if you want:
+            # context.close(); browser.close()
+            # abort(500, description="Report failed to render")
             pass
 
-        # Convert Plotly WebGL/canvas plots to static PNGs so they print reliably
-        page.evaluate("""
-        async () => {
-          if (!window.Plotly) return;
+        # ✅ Convert viz2–viz5 into static images FOR THE PDF ONLY
+        for viz_id in ("viz2", "viz3", "viz4", "viz5"):
+            locator = page.locator(f"#{viz_id}")
+            if locator.count() == 0:
+                continue
 
-          const graphs = Array.from(document.querySelectorAll('.plotly-graph-div'));
-          for (const gd of graphs) {
-            const hasCanvas = gd.querySelector('canvas');
-            if (!hasCanvas) continue;
+            # Ensure visible and laid out
+            locator.wait_for(state="visible", timeout=15_000)
+            locator.scroll_into_view_if_needed()
+            page.wait_for_timeout(300)
 
-            try {
-              const dataUrl = await Plotly.toImage(gd, {
-                format: 'png',
-                width: 1100,
-                height: 750,
-                scale: 2
-              });
-              const img = document.createElement('img');
-              img.src = dataUrl;
-              img.style.width = '100%';
-              img.style.height = 'auto';
-              img.style.display = 'block';
-              gd.innerHTML = '';
-              gd.appendChild(img);
-            } catch (e) {
-              console.warn('Plotly.toImage failed', e);
-            }
-          }
-        }
-        """)
+            # Screenshot the current rendered chart area
+            screenshot_bytes = locator.screenshot(type="png")
 
+            # Replace the div contents with an <img> so PDF captures a static image
+            page.evaluate(
+                """
+                ({ targetId, pngBytes }) => {
+                  const target = document.getElementById(targetId);
+                  if (!target) return;
+
+                  const bytes = new Uint8Array(pngBytes);
+                  let binary = "";
+                  for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                  }
+                  const dataUrl = "data:image/png;base64," + btoa(binary);
+
+                  target.innerHTML = `
+                    <img src="${dataUrl}"
+                         style="display:block;width:100%;height:auto;max-width:100%;"
+                         alt="Static plot preview" />
+                  `;
+                }
+                """,
+                {"targetId": viz_id, "pngBytes": list(screenshot_bytes)},
+            )
+
+        # Print styling
+        page.emulate_media(media="print")
+
+        # Wait for all images (including our injected ones) to load
+        page.wait_for_function(
+            "() => Array.from(document.images).every((img) => img.complete)",
+            timeout=30_000
+        )
         page.wait_for_timeout(600)
 
         pdf_bytes = page.pdf(
@@ -318,6 +376,7 @@ def download_report_pdf(experiment_id: int):
             margin={"top": "8mm", "bottom": "8mm", "left": "8mm", "right": "8mm"},
         )
 
+        context.close()
         browser.close()
 
     filename = f"experiment_{experiment_id}_report.pdf"
