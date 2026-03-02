@@ -128,11 +128,39 @@ def insert_variant_records(records, experiment_id):
             custom_metadata=record.get("custom_metadata"),
         )
         db.session.add(variant)
-        variant_objects.append(variant)
+        variant_objects.append((variant, record))
+
+    db.session.flush()
+
+    id_map = {
+        (v.generation, v.plasmid_variant_index): v.variant_id
+        for (v, _) in variant_objects
+    }
+    for (variant, record) in variant_objects:
+        gen = variant.generation
+
+        parent_index = record.get("parent_plasmid_variant")
+
+        if gen <= 1 or not parent_index:
+            variant.parent_variant_id = None
+            continue
+
+        parent_key = (gen - 1, str(parent_index))
+        parent_id = id_map.get(parent_key)
+
+        if parent_id is None:
+            parent = Variant.query.filter_by(
+                experiment_id=experiment_id,
+                generation=gen - 1,
+                plasmid_variant_index=str(parent_index)
+            ).first()
+
+            parent_id = parent.variant_id if parent else None
+
+        variant.parent_variant_id = parent_id
 
     db.session.commit()
-    return variant_objects
-
+    return [v for (v, _) in variant_objects]
 
 
 def insert_mutation_records(records, variant_id):
