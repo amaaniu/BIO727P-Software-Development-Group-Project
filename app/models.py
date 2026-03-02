@@ -39,6 +39,7 @@ class Variant(db.Model):
     variant_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     experiment_id = db.Column(db.Integer, db.ForeignKey('Experiment.experiment_id'), nullable=False)
     generation = db.Column(db.Integer, nullable=False)
+    experiment_variant_id = db.Column(db.Integer, nullable=False)
     plasmid_variant_index = db.Column(db.Text, nullable=False)
     parent_variant_id = db.Column(db.Integer, db.ForeignKey('Variant.variant_id'))
     dna_sequence = db.Column(db.Text, nullable=False)

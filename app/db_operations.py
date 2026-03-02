@@ -115,10 +115,12 @@ def insert_variant_records(records, experiment_id):
     variant_objects = []
 
     for record in records:
+        plasmid_variant_index = str(record["plasmid_variant_index"])
         variant = Variant(
             experiment_id=experiment_id,
             generation=int(record["generation"]),
-            plasmid_variant_index=str(record["plasmid_variant_index"]),
+            experiment_variant_id=int(plasmid_variant_index) + 1,
+            plasmid_variant_index=plasmid_variant_index,
             parent_variant_id=None,
             dna_sequence=record["dna_sequence"],
             protein_sequence=record.get("protein_sequence"),  # optional if TSV has it
