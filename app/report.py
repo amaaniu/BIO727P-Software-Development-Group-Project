@@ -11,6 +11,7 @@ import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
+from playwright.sync_api import sync_playwright
 from sqlalchemy import func
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
@@ -25,6 +26,7 @@ from app.visualisations.activityscore_plot import plot_activity_violin
 from app.visualisations.trends import plot_activity_median_trend
 from app.visualisations.mutation_fingerprint import plot_mutation_fingerprint
 from app.visualisations.activity_landscape import plot_activity_landscape_3d
+
 
 # IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
@@ -47,7 +49,7 @@ def api_summary():
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
-
+    
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
@@ -84,6 +86,58 @@ def _fig_to_payload(fig):
         return None
     # fig.to_plotly_json() can include numpy arrays; round-trip via JSON to make it Flask-jsonify safe.
     return {"type": "plotly", "figure": json.loads(fig.to_json())}
+
+def get_lineage_chain(leaf_variant):
+    """
+    Return lineage from root -> leaf following parent links.
+    """
+    chain = []
+    seen = set()
+    v = leaf_variant
+
+    while v is not None:
+        if v.variant_id in seen:
+            raise ValueError("Cycle detected in lineage.")
+        seen.add(v.variant_id)
+        chain.append(v)
+        v = v.parent
+
+    chain.reverse()
+    return chain
+
+
+def build_introduced_mutations_df(lineage_chain):
+    """
+    Compute mutations introduced at each generation:
+    child_mutations - parent_mutations
+    """
+    import pandas as pd
+
+    rows = []
+    prev = set()
+
+    for variant in lineage_chain:
+        current = {
+            (m.position, m.wt_residue, m.mutant_residue)
+            for m in variant.mutations
+        }
+
+        introduced = current - prev
+
+        for pos, wt, mut in introduced:
+            rows.append(
+                dict(
+                    generation=variant.generation,
+                    variant_id=variant.variant_id,
+                    position=pos,
+                    wt_residue=wt,
+                    mutant_residue=mut,
+                )
+            )
+
+        prev = current
+
+    return pd.DataFrame(rows)
 
 @report_bp.route("/api/render-report", methods=["GET"])
 @login_required
@@ -234,11 +288,18 @@ def api_render_report():
     try:
         if selected_variant_id and not mutations_df.empty:
             viz4 = _fig_to_payload(
-                plot_mutation_fingerprint(
-                    mutations_df,
-                    protein_length=protein_length,
-                    title=f"Mutation fingerprint (variant {selected_variant_id})",
-                )
+                selected_variant = Variant.query.get(selected_variant_id)
+
+chain = get_lineage_chain(selected_variant)
+introduced_df = build_introduced_mutations_df(chain)
+
+protein_length = len(selected_variant.protein_sequence)
+
+fig4 = plot_mutation_fingerprint(
+    introduced_df,
+    protein_length=protein_length,
+    title=f"Mutation fingerprint (introduced per generation) — variant {selected_variant_id}",
+)
             )
         else:
             viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
@@ -272,18 +333,6 @@ def api_render_report():
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ModuleNotFoundError:
-        abort(
-            503,
-            description=(
-                "PDF export requires Playwright. Install it with "
-                "'pip install playwright' and then run "
-                "'playwright install chromium'."
-            ),
-        )
-
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
