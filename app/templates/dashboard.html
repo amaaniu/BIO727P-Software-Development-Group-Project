@@ -122,7 +122,7 @@
                         <th>Generations</th>
                         <th>Status</th>
                         <th class="d-none d-lg-table-cell">Last Updated</th>
-                        <th class="text-end pe-4">Action</th>
+                        <th class="text-end pe-4 col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -157,12 +157,18 @@
                           {% endif %}
                         </td>
                         <td class="text-muted small d-none d-lg-table-cell">{{ exp.last_updated.strftime('%Y-%m-%d') if exp.last_updated else 'N/A' }}</td>
-                        <td class="text-end pe-4">
-                          {% if exp.experiment_id is defined and exp.experiment_id %}
-                            <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">View Report</a>
-                          {% else %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled>View Report</button>
-                          {% endif %}
+                        <td class="text-end pe-4 col-action">
+                          <div class="dashboard-actions d-inline-flex gap-2">
+                            {% set action_label = 'Run Analysis' if exp.status == 'In Progress' else 'View Report' %}
+                            {% if exp.experiment_id is defined and exp.experiment_id %}
+                              <a href="{{ url_for('main.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">{{ action_label }}</a>
+                            {% else %}
+                              <button type="button" class="btn btn-sm btn-outline-secondary" disabled>{{ action_label }}</button>
+                            {% endif %}
+                            {% if exp.status == 'Completed' %}
+                              <button type="button" class="btn btn-sm btn-outline-primary" disabled>Download PDF</button>
+                            {% endif %}
+                          </div>
                         </td>
                     </tr>
                   {% endfor %}

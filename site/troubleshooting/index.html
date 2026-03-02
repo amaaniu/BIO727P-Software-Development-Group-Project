@@ -495,17 +495,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-escalate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to escalate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#version-note" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -695,17 +684,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-escalate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to escalate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#version-note" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -737,46 +715,64 @@
 <p>Use this page to quickly diagnose common user issues.</p>
 <h2 id="upload-errors">Upload errors</h2>
 <h3 id="unsupported-file-type">Unsupported file type</h3>
-<p>Symptom:
-- Upload fails immediately.</p>
-<p>Fix:
-- Use <code>.tsv</code> or <code>.json</code> files only.</p>
+<p>Symptom:</p>
+<ul>
+<li>Upload fails immediately.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Use <code>.tsv</code> or <code>.json</code> files only.</li>
+</ul>
 <h3 id="missing-required-fields">Missing required fields</h3>
-<p>Symptom:
-- Validation reports missing columns/keys.</p>
-<p>Fix:
-- Ensure required fields are present and named exactly as expected.</p>
+<p>Symptom:</p>
+<ul>
+<li>Validation reports missing columns/keys.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Ensure required fields are present and named exactly as expected.</li>
+</ul>
 <h2 id="sequence-validation-errors">Sequence validation errors</h2>
 <h3 id="invalid-sequence-characters">Invalid sequence characters</h3>
-<p>Symptom:
-- Rows flagged for illegal symbols.</p>
-<p>Fix:
-- Remove non-biological characters and whitespace.
-- Confirm DNA/protein alphabet expected by your pipeline.</p>
+<p>Symptom:</p>
+<ul>
+<li>Rows flagged for incorrect (non-DNA) symbols.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Remove non-biological characters and whitespace.</li>
+<li>Confirm DNA/protein alphabet expected by your pipeline.</li>
+</ul>
 <h3 id="length-mismatch">Length mismatch</h3>
-<p>Symptom:
-- Sequence length check fails.</p>
-<p>Fix:
-- Verify target region and alignment with reference/wild-type.</p>
+<p>Symptom:</p>
+<ul>
+<li>Sequence length check fails.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Verify target region and alignment with reference/wild-type.</li>
+</ul>
 <h2 id="analysis-issues">Analysis issues</h2>
 <h3 id="no-activity-metric-generated">No Activity Metric generated</h3>
-<p>Symptom:
-- Analysis completes with empty score column.</p>
-<p>Fix:
-- Check for missing activity inputs.
-- Confirm preprocessing did not filter all rows.</p>
+<p>Symptom:</p>
+<ul>
+<li>Analysis completes with empty score column.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Check for missing activity inputs.</li>
+<li>Confirm preprocessing did not filter all rows.</li>
+</ul>
 <h3 id="unexpected-ranking">Unexpected ranking</h3>
-<p>Symptom:
-- High-performing known variants rank low.</p>
-<p>Fix:
-- Review normalisation method and metric weights.
-- Verify replicate handling and outlier rules.</p>
-<h2 id="when-to-escalate">When to escalate</h2>
-<p>If errors persist, share:
-- Experiment ID.
-- Timestamp of run.
-- Input schema/sample rows.
-- Full validation error text.</p>
+<p>Symptom:</p>
+<ul>
+<li>High-performing known variants rank low.</li>
+</ul>
+<p>Fix:</p>
+<ul>
+<li>Review normalisation method and metric weights.</li>
+<li>Verify replicate handling and outlier rules.</li>
+</ul>
 <h2 id="version-note">Version note</h2>
 <p>Last updated: February 20, 2026.</p>
 
@@ -832,6 +828,8 @@
     
     
       <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

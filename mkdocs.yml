@@ -11,6 +11,8 @@ theme:
 extra_css:
   - stylesheets/brand-tokens.css
   - stylesheets/mkdocs-overrides.css
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 nav:
   - Overview: index.md
   - Getting Started: getting_started.md
@@ -23,3 +25,6 @@ plugins:
 markdown_extensions:
   - admonition
   - tables
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true

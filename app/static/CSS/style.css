@@ -411,6 +411,20 @@ body:not(.home-page) .card:hover {
   min-width: 84px;
 }
 
+.dashboard-table .col-action {
+  width: 240px;
+  white-space: normal;
+}
+
+.dashboard-table .dashboard-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.dashboard-table .dashboard-actions .btn {
+  white-space: nowrap;
+}
+
 .dashboard-head {
   background-color: var(--color-primary);
   color: var(--color-primary-foreground);

@@ -1,4 +1,4 @@
-# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, tutorial page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
+# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, user guide page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
 from pathlib import Path
 from flask import Blueprint, render_template, request, abort, current_app, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
@@ -29,23 +29,28 @@ def documentation():
 
     return 'soon rendering template documentation'
 
-# Creates the route for the tutorial page and the tutorial documentation sub-routes made using MkDocs. The tutorial_docs route serves the built MkDocs documentation. 
+# Creates the route for the user guide page and the MkDocs documentation sub-routes.
+# The user_guide_docs route serves the built MkDocs documentation.
+@main_bp.route('/user-guide')
 @main_bp.route('/tutorial')
-def tutorial():
-    """Renders the tutorial page."""
+def user_guide():
+    """Renders the user guide page."""
     return render_template('tutorial.html')
 
 
+@main_bp.route('/user-guide/docs')
 @main_bp.route('/tutorial/docs')
-def tutorial_docs_root():
-    """Normalizes docs root URL to include trailing slash."""
-    return redirect(url_for('main.tutorial_docs', doc_path='index.html'))
+def user_guide_docs_root():
+    """Normalises docs root URL to include trailing slash."""
+    return redirect(url_for('main.user_guide_docs', doc_path='index.html'))
 
 
+@main_bp.route('/user-guide/docs/')
+@main_bp.route('/user-guide/docs/<path:doc_path>')
 @main_bp.route('/tutorial/docs/')
 @main_bp.route('/tutorial/docs/<path:doc_path>')
-def tutorial_docs(doc_path='index.html'):
-    """Serves built MkDocs pages under the tutorial route."""
+def user_guide_docs(doc_path='index.html'):
+    """Serves built MkDocs pages under the user guide route."""
     docs_dir = Path(current_app.root_path).parent / 'site'
     if not docs_dir.exists():
         abort(404, description='Documentation is not built yet. Run "mkdocs build".')
@@ -206,6 +211,12 @@ def view_report(experiment_id):
     if experiment is None:
         abort(404)
     return redirect(url_for('report.report_page', experiment_id=experiment_id))
+
+@main_bp.route('/experiments/<int:experiment_id>/download_pdf')
+@login_required
+def download_pdf(experiment_id):
+    # Placeholder route for downloading a PDF report for an experiment owned by the logged-in user.
+    return f"Download PDF report for experiment {experiment_id} (functionality not implemented yet)"
 
 @main_bp.route('/experiments/new')
 @login_required

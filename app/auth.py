@@ -1,5 +1,8 @@
-# This file has the file defines the routes for the authentication blueprint of the Flask application.
-# It includes routes for user login, registration, and logout, as well as any other functionality users must login to access. 
+""""""
+#Main Blueprint
+#This file has the file defines the routes for the authentication blueprint of the Flask application.
+# It includes routes for user login, registration, and logout, as well as any other functionality users must login to access.
+""""""
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash

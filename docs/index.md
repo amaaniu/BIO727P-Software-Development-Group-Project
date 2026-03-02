@@ -3,6 +3,7 @@
 The Directed Evolution Monitoring & Analytics Portal is a web-based platform for staging and analysing directed evolution (DE) experiments.
 
 This help manual explains how to:
+
 - Set up an analysis.
 - Upload and validate your data.
 - Interpret analytical outputs, including the Activity Score.
@@ -10,6 +11,7 @@ This help manual explains how to:
 ## What this portal does
 
 The portal supports the full workflow from experiment setup to ranked variant outputs. It can:
+
 - Retrieve details of the wild-type protein from UniProt.
 - Validate uploaded plasmid FASTA and experimental run files.
 - Compute a unified metric for Activity used to compare variants.
@@ -19,6 +21,7 @@ The portal supports the full workflow from experiment setup to ranked variant ou
 ## Directed evolution context
 
 In this project, DE runs in iterative cycles of mutagenesis, selection, and carry-forward of top variants. The portal is used after each experimental run to:
+
 - register the target protein using a UniProt accession code;
 - upload plasmid FASTA encoding the target polymerase;
 - upload assay output from the run (for example, DNA and protein quantification, used for selection);
