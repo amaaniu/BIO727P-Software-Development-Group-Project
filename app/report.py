@@ -11,6 +11,7 @@ import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
+from playwright.sync_api import sync_playwright
 from sqlalchemy import func
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
@@ -107,34 +108,51 @@ def get_lineage_chain(leaf_variant):
 
 def build_introduced_mutations_df(lineage_chain):
     """
-    Compute mutations introduced at each generation:
-    child_mutations - parent_mutations
+    Build a dataframe of mutations introduced per generation along a lineage.
+
+    Robustness:
+      - Compares each variant to its actual Variant.parent (not just previous in the list)
+      - Uses .all() for lazy='dynamic' relationships
+      - De-duplicates (generation, position) collisions by joining labels later in plotting
+      - Optionally filters to substitution-like mutation types if present
     """
     import pandas as pd
 
+    chain = list(lineage_chain)
+    if not chain:
+        return pd.DataFrame(
+            columns=["generation", "variant_id", "position", "wt_residue", "mutant_residue"]
+        )
+
+    def _keys(v):
+        q = v.mutations
+        # v.mutations is lazy='dynamic' → query; ensure list of objects
+        muts = q.all() if hasattr(q, "all") else list(q)
+
+        # Optional filter: keep only substitutions if mutation_type exists
+        if muts and hasattr(muts[0], "mutation_type"):
+            muts = [m for m in muts if (m.mutation_type or "").lower() in ("substitution", "missense", "nonsynonymous")]
+
+        return {(int(m.position), str(m.wt_residue), str(m.mutant_residue)) for m in muts}
+
     rows = []
-    prev = set()
+    for v in chain:
+        cur = _keys(v)
+        parent = v.parent  # use the real parent relationship
+        par = _keys(parent) if parent is not None else set()
 
-    for variant in lineage_chain:
-        current = {
-            (m.position, m.wt_residue, m.mutant_residue)
-            for m in variant.mutations
-        }
-
-        introduced = current - prev
+        introduced = cur - par
 
         for pos, wt, mut in introduced:
             rows.append(
                 dict(
-                    generation=variant.generation,
-                    variant_id=variant.variant_id,
-                    position=pos,
+                    generation=int(v.generation),
+                    variant_id=int(v.variant_id),
+                    position=int(pos),
                     wt_residue=wt,
                     mutant_residue=mut,
                 )
             )
-
-        prev = current
 
     return pd.DataFrame(rows)
 
@@ -286,24 +304,20 @@ def api_render_report():
     # ---- 4) Mutation fingerprint ----
     try:
         if selected_variant_id and not mutations_df.empty:
-            selected_variant = db.session.get(Variant, selected_variant_id)
-            if selected_variant is None:
-                viz4 = "<p class='text-muted'>Selected variant not found.</p>"
-            else:
-                chain = get_lineage_chain(selected_variant)
-                introduced_df = build_introduced_mutations_df(chain)
-                selected_protein_length = len((selected_variant.protein_sequence or "").strip()) or protein_length
+            viz4 = _fig_to_payload(
+                selected_variant = Variant.query.get(selected_variant_id)
 
-                viz4 = _fig_to_payload(
-                    plot_mutation_fingerprint(
-                        introduced_df,
-                        protein_length=selected_protein_length,
-                        title=(
-                            "Mutation fingerprint (introduced per generation) "
-                            f"— variant {selected_variant_id}"
-                        ),
-                    )
-                )
+chain = get_lineage_chain(selected_variant)
+introduced_df = build_introduced_mutations_df(chain)
+
+protein_length = len(selected_variant.protein_sequence)
+
+fig4 = plot_mutation_fingerprint(
+    introduced_df,
+    protein_length=protein_length,
+    title=f"Mutation fingerprint (introduced per generation) — variant {selected_variant_id}",
+)
+            )
         else:
             viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
     except Exception as e:
@@ -336,18 +350,6 @@ def api_render_report():
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ModuleNotFoundError:
-        abort(
-            503,
-            description=(
-                "PDF export requires Playwright. Install it with "
-                "'pip install playwright' and then run "
-                "'playwright install chromium'."
-            ),
-        )
-
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
