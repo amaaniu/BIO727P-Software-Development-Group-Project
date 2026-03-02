@@ -578,7 +578,7 @@
 
       // SHOW NEXT BUTTON + LINK TO REPORT ROUTE
       nextButton.style.display = "block";
-      nextButton.href = `/report/${experimentId}`;
+      nextButton.href = `/run-analysis/${experimentId}`;
 
     } catch (err) {
       setStatus(dataStatus, "danger", "Network/server error processing file.");

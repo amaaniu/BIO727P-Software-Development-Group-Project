@@ -1,20 +1,6 @@
 # app/report.py
 """
-Report blueprint:
-- Pulls experiment/variant/mutation data from the DB
-- Runs analysis + visualisation functions
-- Renders report.html (you can keep the fake loading bar for now)
 
-Expected files (based on what you uploaded):
-- app/visualisation/activityscore_plot.py        -> plot_activity_violin
-- app/visualisation/trends.py                    -> plot_activity_median_trend
-- app/visualisation/mutation_fingerprint.py      -> plot_mutation_fingerprint
-- app/visualisation/activity_landscape.py        -> plot_activity_landscape_3d
-- app/analysis/top10_table_only.py               -> compute_top10
-
-Make sure these folders are packages:
-- app/analysis/__init__.py
-- app/visualisation/__init__.py
 """
 
 from __future__ import annotations
@@ -23,7 +9,9 @@ import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
-
+from urllib.parse import urlparse
+from flask import Response, url_for, abort
+from playwright.sync_api import sync_playwright
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData
 from app.db_operations import store_analysis_results
@@ -41,134 +29,17 @@ from app.visualisations.activity_landscape import plot_activity_landscape_3d
 # IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
 
-
-@report_bp.route("/<int:experiment_id>", methods=["GET"])
+@report_bp.get("report/<int:experiment_id>")
 @login_required
-def report_page(experiment_id: int):
+def view_report(experiment_id: int):
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
     ).first()
     if not exp:
         abort(404, description="Experiment not found")
+
     return render_template("report.html", experiment_id=experiment_id)
-
-
-@report_bp.route("/api/run-analysis", methods=["POST"])
-@login_required
-def api_run_analysis():
-    payload = request.get_json(silent=True) or {}
-    experiment_id = payload.get("experiment_id")
-
-    if not experiment_id:
-        return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
-
-    exp = Experiment.query.filter_by(
-        experiment_id=int(experiment_id),
-        user_id=current_user.user_id
-    ).first()
-    if not exp:
-        return jsonify({"ok": False, "error": "Experiment not found"}), 404
-
-    if not exp.plasmid_sequence:
-        return jsonify({"ok": False, "error": "WT plasmid FASTA not uploaded yet."}), 400
-
-    variants = Variant.query.filter_by(experiment_id=exp.experiment_id).all()
-    if not variants:
-        return jsonify({"ok": False, "error": "No variants found for this experiment."}), 400
-
-    # Baseline (WT) yields:
-    # 1) Prefer experiment-level fields if your schema has them.
-    # 2) Fallback to earliest variant with non-null yields (usually generation 0).
-    wt_dna = getattr(exp, "wt_dna_yield", None)
-    wt_protein = getattr(exp, "wt_protein_yield", None)
-
-    baseline_variant = None
-    if wt_dna is None or wt_protein is None:
-        yield_candidates = [
-            v for v in variants
-            if v.dna_yield is not None and v.protein_yield is not None
-        ]
-        if yield_candidates:
-            baseline_variant = min(
-                yield_candidates,
-                key=lambda v: (int(v.generation), int(v.variant_id)),
-            )
-            wt_dna = baseline_variant.dna_yield
-            wt_protein = baseline_variant.protein_yield
-
-    if wt_dna is None or wt_protein is None:
-        return jsonify({"ok": False, "error": "WT baseline missing (no experiment-level WT yields and no baseline variant)."}), 400
-
-    wt_dna_yield = float(wt_dna)
-    wt_protein_yield = float(wt_protein)
-    if wt_dna_yield == 0.0 or wt_protein_yield == 0.0:
-        return jsonify({"ok": False, "error": "WT baseline yields cannot be zero."}), 400
-
-    try:
-        analysed = 0
-        skipped = 0
-        skip_reasons = []
-        mutations_inserted = 0
-
-        for v in variants:
-            if not v.dna_sequence:
-                skipped += 1
-                if len(skip_reasons) < 10:
-                    skip_reasons.append(f"variant_id={v.variant_id}: missing dna_sequence")
-                continue
-
-            if v.dna_yield is None or v.protein_yield is None:
-                skipped += 1
-                if len(skip_reasons) < 10:
-                    skip_reasons.append(f"variant_id={v.variant_id}: missing dna_yield/protein_yield")
-                continue
-
-            result = analyse_variant(
-                wt_plasmid_sequence=exp.plasmid_sequence,
-                variant_plasmid_sequence=v.dna_sequence,
-                generation=int(v.generation),
-                dna_yield=float(v.dna_yield),
-                protein_yield=float(v.protein_yield),
-                wt_dna_yield=wt_dna_yield,
-                wt_protein_yield=wt_protein_yield,
-                circular=True,
-                min_aa=200,
-            )
-
-            # Store using your db_operations helper (no commit inside it)
-            mutations_inserted += store_analysis_results(v, result)
-            analysed += 1
-
-        if analysed == 0:
-            if (exp.status or "").strip().lower() not in {"completed", "complete", "done"}:
-                exp.status = "in_progress"
-            db.session.commit()
-            return jsonify({
-                "ok": False,
-                "error": "Analysis did not process any variants; experiment remains in progress.",
-                "experiment_id": exp.experiment_id,
-                "variants_analysed": analysed,
-                "variants_skipped": skipped,
-                "skip_reasons_preview": skip_reasons,
-                "mutations_inserted": mutations_inserted,
-            }), 400
-
-        exp.status = "completed"
-        db.session.commit()
-
-        return jsonify({
-            "ok": True,
-            "experiment_id": exp.experiment_id,
-            "variants_analysed": analysed,
-            "variants_skipped": skipped,
-            "skip_reasons_preview": skip_reasons,  # first 10
-            "mutations_inserted": mutations_inserted,
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"ok": False, "error": str(e)}), 400
 
 @report_bp.route("/api/summary", methods=["GET"])
 @login_required
@@ -375,3 +246,83 @@ def api_render_report():
         "summary": summary,
         "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5}
     })
+
+@report_bp.get("/<int:experiment_id>/download.pdf")
+@login_required
+def download_report_pdf(experiment_id: int):
+    exp = Experiment.query.filter_by(
+        experiment_id=experiment_id,
+        user_id=current_user.user_id
+    ).first()
+    if not exp:
+        abort(404, description="Experiment not found")
+
+    report_url = url_for("report.view_report", experiment_id=experiment_id, _external=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 1800})
+
+        page.goto(report_url, wait_until="domcontentloaded")
+
+        # Wait for your JS to finish rendering (you add window.__REPORT_READY__ in report.html)
+        page.wait_for_function(
+            "() => window.__REPORT_READY__ === true || window.__REPORT_READY__ === 'error'",
+            timeout=90_000
+        )
+
+        # If you want to fail fast on errors instead of printing an error PDF:
+        state = page.evaluate("() => window.__REPORT_READY__")
+        if state == "error":
+            # still generate PDF of error state OR raise
+            pass
+
+        # Convert Plotly WebGL/canvas plots to static PNGs so they print reliably
+        page.evaluate("""
+        async () => {
+          if (!window.Plotly) return;
+
+          const graphs = Array.from(document.querySelectorAll('.plotly-graph-div'));
+          for (const gd of graphs) {
+            const hasCanvas = gd.querySelector('canvas');
+            if (!hasCanvas) continue;
+
+            try {
+              const dataUrl = await Plotly.toImage(gd, {
+                format: 'png',
+                width: 1100,
+                height: 750,
+                scale: 2
+              });
+              const img = document.createElement('img');
+              img.src = dataUrl;
+              img.style.width = '100%';
+              img.style.height = 'auto';
+              img.style.display = 'block';
+              gd.innerHTML = '';
+              gd.appendChild(img);
+            } catch (e) {
+              console.warn('Plotly.toImage failed', e);
+            }
+          }
+        }
+        """)
+
+        page.wait_for_timeout(600)
+
+        pdf_bytes = page.pdf(
+            format="A4",
+            print_background=True,
+            display_header_footer=False,
+            prefer_css_page_size=True,
+            margin={"top": "8mm", "bottom": "8mm", "left": "8mm", "right": "8mm"},
+        )
+
+        browser.close()
+
+    filename = f"experiment_{experiment_id}_report.pdf"
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
