@@ -11,7 +11,6 @@ import json
 from flask import Blueprint, jsonify, render_template, abort, request
 from flask_login import current_user, login_required
 import pandas as pd
-from playwright.sync_api import sync_playwright
 from sqlalchemy import func
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
@@ -287,20 +286,24 @@ def api_render_report():
     # ---- 4) Mutation fingerprint ----
     try:
         if selected_variant_id and not mutations_df.empty:
-            viz4 = _fig_to_payload(
-                selected_variant = Variant.query.get(selected_variant_id)
+            selected_variant = db.session.get(Variant, selected_variant_id)
+            if selected_variant is None:
+                viz4 = "<p class='text-muted'>Selected variant not found.</p>"
+            else:
+                chain = get_lineage_chain(selected_variant)
+                introduced_df = build_introduced_mutations_df(chain)
+                selected_protein_length = len((selected_variant.protein_sequence or "").strip()) or protein_length
 
-chain = get_lineage_chain(selected_variant)
-introduced_df = build_introduced_mutations_df(chain)
-
-protein_length = len(selected_variant.protein_sequence)
-
-fig4 = plot_mutation_fingerprint(
-    introduced_df,
-    protein_length=protein_length,
-    title=f"Mutation fingerprint (introduced per generation) — variant {selected_variant_id}",
-)
-            )
+                viz4 = _fig_to_payload(
+                    plot_mutation_fingerprint(
+                        introduced_df,
+                        protein_length=selected_protein_length,
+                        title=(
+                            "Mutation fingerprint (introduced per generation) "
+                            f"— variant {selected_variant_id}"
+                        ),
+                    )
+                )
         else:
             viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
     except Exception as e:
@@ -333,6 +336,18 @@ fig4 = plot_mutation_fingerprint(
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
+    try:
+        from playwright.sync_api import sync_playwright
+    except ModuleNotFoundError:
+        abort(
+            503,
+            description=(
+                "PDF export requires Playwright. Install it with "
+                "'pip install playwright' and then run "
+                "'playwright install chromium'."
+            ),
+        )
+
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
