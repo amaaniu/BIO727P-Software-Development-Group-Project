@@ -1,56 +1,51 @@
-# app/report.py
 """
-Endpoints and helpers for building the analysis report experience.
-
-This module serves the interactive report page, assembles summary and
-visualisation payloads from database-backed analysis outputs, and renders
-the final report as a PDF for download.
-
+Build and serve analysis reports.
+Includes report page endpoints, summary/visualization payload helpers, and PDF export.
 """
+
 from __future__ import annotations
-from urllib.parse import urlparse
 
-from flask import Response, abort, request, url_for
-from app.models import Experiment, UniProtData, UniProtFeature
+# Standard Library
+from urllib.parse import urlparse
 import json
-from flask import Blueprint, jsonify, render_template, abort, request
-from flask_login import current_user, login_required
+
+#Third-party libraries
 import pandas as pd
+from flask import Blueprint, jsonify, render_template, Response, abort, request, url_for
+from flask_login import current_user, login_required
 from playwright.sync_api import sync_playwright
 from sqlalchemy import func
+
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
+
+#App services and operations
 from app.db_operations import store_analysis_results
 from app.analysis.analysis import analyse_variant
-from app.visualisations.data_sources import get_variants, get_mutations
 from app.uploads.staging import alphafold_entry_url, fetch_alphafold_prediction
-# Analysis + visuals (based on your uploaded scripts)
-from app.visualisations.top10_table_only import compute_top10
 
+#Visualisation builders and data sources
+from app.visualisations.data_sources import get_variants, get_mutations
+from app.visualisations.top10_table_only import compute_top10
 from app.visualisations.activityscore_plot import plot_activity_violin
 from app.visualisations.trends import plot_activity_median_trend
 from app.visualisations.mutation_fingerprint import plot_mutation_fingerprint
 from app.visualisations.activity_landscape import plot_activity_landscape_3d
 
 
-# IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
 
 @report_bp.get("/<int:experiment_id>")
 @login_required
 def view_report(experiment_id: int):
     """Render the report page shell for a user's experiment.
-
     Args:
         experiment_id: Database identifier for the experiment to display.
 
     Returns:
         Response: Rendered HTML template for the report page.
     """
-    exp = Experiment.query.filter_by(
-        experiment_id=experiment_id,
-        user_id=current_user.user_id
-    ).first()
+    exp = Experiment.query.filter_by(experiment_id=experiment_id,user_id=current_user.user_id).first()
     if not exp:
         abort(404, description="Experiment not found")
 
@@ -59,8 +54,7 @@ def view_report(experiment_id: int):
 @report_bp.route("/api/summary", methods=["GET"])
 @login_required
 def api_summary():
-    """Return a lightweight summary payload for report consumers.
-
+    """Provide a summary of variants for a given experiment, suitable for report tables
     Args:
         None: Reads ``experiment_id`` from the request query string.
 
@@ -71,17 +65,12 @@ def api_summary():
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
     
-    exp = Experiment.query.filter_by(
-        experiment_id=experiment_id,
-        user_id=current_user.user_id
-    ).first()
+    exp = Experiment.query.filter_by(experiment_id=experiment_id, user_id=current_user.user_id).first()
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
-    variants = (Variant.query
-                .filter_by(experiment_id=experiment_id)
-                .order_by(Variant.generation.asc(), Variant.plasmid_variant_index.asc())
-                .all())
+    variants = (Variant.query.filter_by(experiment_id=experiment_id)
+                .order_by(Variant.generation.asc(), Variant.plasmid_variant_index.asc()).all())
 
     if not variants:
         return jsonify({"ok": False, "error": "No variants found"}), 404
@@ -104,7 +93,6 @@ def api_summary():
 
 def _fig_to_payload(fig):
     """Convert a Plotly figure into a JSON-safe response payload.
-
     Args:
         fig: Plotly figure object or ``None``.
 
@@ -119,15 +107,11 @@ def _fig_to_payload(fig):
 
 def get_lineage_chain(leaf_variant):
     """Follow parent links to build a lineage chain from root to leaf.
-
     Args:
         leaf_variant: Final ``Variant`` object whose ancestry should be traced.
 
     Returns:
         list: Ordered lineage of ``Variant`` objects from root to leaf.
-    """
-    """
-    Return lineage from root -> leaf following parent links.
     """
     chain = []
     seen = set()
@@ -145,22 +129,14 @@ def get_lineage_chain(leaf_variant):
 
 
 def build_introduced_mutations_df(lineage_chain):
-    """Create a dataframe of mutations first introduced at each lineage step.
+    """Build a dataframe of mutations newly introduced at each lineage generation.
 
     Args:
-        lineage_chain: Ordered lineage of ``Variant`` objects.
+        lineage_chain (Iterable[Variant]): Ordered lineage of Variant objects.
 
     Returns:
-        pandas.DataFrame: Rows describing newly introduced mutations by generation.
-    """
-    """
-    Build a dataframe of mutations introduced per generation along a lineage.
-
-    Robustness:
-      - Compares each variant to its actual Variant.parent (not just previous in the list)
-      - Uses .all() for lazy='dynamic' relationships
-      - De-duplicates (generation, position) collisions by joining labels later in plotting
-      - Optionally filters to substitution-like mutation types if present
+        pandas.DataFrame: Mutation rows with columns:
+            generation, variant_id, position, wt_residue, mutant_residue.
     """
     import pandas as pd
 
@@ -207,7 +183,6 @@ def build_introduced_mutations_df(lineage_chain):
 @login_required
 def api_render_report():
     """Assemble the full report payload for the frontend report template.
-
     Args:
         None: Reads ``experiment_id`` from the request query string.
 
@@ -226,7 +201,7 @@ def api_render_report():
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
-    # --- Pull data via datasources.py (DB -> list[dict] -> DataFrame) ---
+    # Pull data via datasources.py (DB -> list[dict] -> DataFrame) ---
     variants_df = get_variants(experiment_id)
     if variants_df is None or variants_df.empty:
         return jsonify({"ok": True, "summary": "No variants available yet.", "viz": {}})
@@ -236,7 +211,7 @@ def api_render_report():
         if col in variants_df.columns:
             variants_df[col] = pd.to_numeric(variants_df[col], errors="coerce")
 
-    # Robust fallback: some pipelines store activity on Variant.activity_score only.
+    # some pipelines store activity on Variant.activity_score only.
     if "activity_score_log2" not in variants_df.columns and "activity_score" in variants_df.columns:
         variants_df["activity_score_log2"] = pd.to_numeric(variants_df["activity_score"], errors="coerce")
     elif "activity_score_log2" in variants_df.columns and "activity_score" in variants_df.columns:
@@ -408,7 +383,6 @@ def api_render_report():
 @login_required
 def download_report_pdf(experiment_id: int):
     """Render a user's report page to PDF using Playwright.
-
     Args:
         experiment_id: Database identifier for the experiment to export.
 

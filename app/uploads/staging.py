@@ -1,18 +1,13 @@
-"""Utilities for staging upload data before analysis.
-
-This module handles three pieces of the upload workflow:
-- fetching wild-type protein metadata from UniProt;
-- retrieving AlphaFold prediction metadata for preview links/images;
-- validating uploaded plasmid FASTA content against the expected wild-type protein.
+"""Prepare uploaded sequence data for analysis.
+Includes UniProt/AlphaFold metadata lookup and FASTA validation.
 """
-import requests
 
+import requests
 from app.uploads.orf_translation import six_frame_orfs
 
 
 def fetch_uniprot(accession):
     """Fetch and normalise UniProt metadata for a protein accession.
-
     Args:
         accession: UniProt accession supplied by the user.
 
@@ -49,7 +44,7 @@ def fetch_uniprot(accession):
     if not sequence:
         raise ValueError("Sequence not found in UniProt response")
 
-    # Features 
+    # Features table with type, description, and location (start/end) for the upload summary panel.
     features = []
     for f in data.get("features", []):
         ftype = f.get("type")
@@ -80,11 +75,8 @@ def fetch_uniprot(accession):
                 if v:
                     gene_synonyms.append(v)
 
-    # Function text
     function_text = None
-    # Catalytic activity text
     catalytic_activity_text = None
-    # Similarity / family text
     similarity_texts = []
 
     # Extract only the curated comment types used in the upload summary panel.
@@ -124,13 +116,12 @@ def fetch_uniprot(accession):
         "gene_name": gene_name,
         "gene_synonyms": sorted(set(gene_synonyms)),
         "function_text": function_text,
-        "catalytic_activity": catalytic_activity_text,
+        "catalytic_activity": catalytic_activity_text, #
         "similarity_texts": similarity_texts,  # often includes "Belongs to ..."
     }
 
 def alphafold_entry_url(uniprot_id: str) -> str:
     """Build the public AlphaFold entry URL for a UniProt accession.
-
     Args:
         uniprot_id: UniProt accession used by AlphaFold as the entry key.
 
@@ -142,7 +133,6 @@ def alphafold_entry_url(uniprot_id: str) -> str:
 
 def fetch_alphafold_prediction(uniprot_id: str, timeout: int = 15):
     """Fetch AlphaFold prediction metadata for a UniProt accession.
-
     Args:
         uniprot_id: UniProt accession to look up in the AlphaFold API.
         timeout: Request timeout in seconds.
@@ -170,7 +160,6 @@ def fetch_alphafold_prediction(uniprot_id: str, timeout: int = 15):
 
 def fetch_alphafold_thumbnail_url(uniprot_id: str, timeout: int = 15):
     """Return a thumbnail-like image URL from AlphaFold metadata.
-
     Args:
         uniprot_id: UniProt accession to look up.
         timeout: Request timeout in seconds.
@@ -184,14 +173,13 @@ def fetch_alphafold_thumbnail_url(uniprot_id: str, timeout: int = 15):
         return None
     return prediction.get("paeImageUrl")
     
-# FASTA parsing + DNA validation
+#
 class FastaError(ValueError):
     """Raised when an uploaded FASTA file fails structural or character validation."""
     pass
 
 def parse_fasta(fasta_text):
     """Parse a single-record plasmid FASTA payload.
-
     Args:
         fasta_text: Raw FASTA file contents as text.
 
@@ -264,7 +252,6 @@ def parse_fasta(fasta_text):
 
 def match_wt_exact(orfs, wt_protein):
     """Check translated ORFs for an exact wild-type protein match.
-
     Args:
         orfs: ORF dictionaries produced by ``six_frame_orfs``.
         wt_protein: Expected wild-type protein sequence from UniProt.
@@ -275,7 +262,6 @@ def match_wt_exact(orfs, wt_protein):
     """
 
     wt = wt_protein.strip().upper()
-
     # Exact matching is intentional here because upload validation is a strict gate.
     for orf in orfs:
         protein = orf["protein"]
@@ -298,7 +284,6 @@ def match_wt_exact(orfs, wt_protein):
 
 def validate_plasmid_fasta(fasta_text, wt_protein_sequence, min_aa=50):
     """Validate a plasmid FASTA by translating ORFs and comparing to the WT protein.
-
     Args:
         fasta_text: Raw plasmid FASTA content uploaded by the user.
         wt_protein_sequence: Wild-type protein sequence fetched from UniProt.
