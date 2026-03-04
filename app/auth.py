@@ -1,8 +1,4 @@
-""""""
-#Main Blueprint
-#This file has the file defines the routes for the authentication blueprint of the Flask application.
-# It includes routes for user login, registration, and logout, as well as any other functionality users must login to access.
-""""""
+"""Authentication blueprint routes for registration, login, and logout."""
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,7 +15,7 @@ def register():
     """Renders the registration page and handles user registration."""
 
     if request.method == 'POST':
-        # Handles the registration form submission by retrieving the email, password, and confirmed password from the form data
+        # Read submitted credentials from the registration form.
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
@@ -42,8 +38,7 @@ def register():
             flash("Passwords do not match", 'danger')
             return render_template('register.html', username=username, email=email)
            
-        # A new user is created with the provided username and password, and the password is hashed for security. 
-        # The user is then added to the database and committed. After successful registration, the user is automatically logged in and redirected to the dashboard page.
+        # Create and store the user with a hashed password.
         user = User(username=username, email=email, password_hash=generate_password_hash(password)) 
 
         try:
@@ -64,7 +59,7 @@ def register():
 def login():
     """Renders the login page and handles user login."""
     
-     # Immediately after a successful login, the user is redirected to the dashboard page. If the user is already authenticated and tries to access the login page, they are also redirected to the dashboard page to prevent them from logging in again.
+    # Prevent authenticated users from seeing the login form again.
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
         
@@ -80,8 +75,8 @@ def login():
             login_user(user)
             return redirect(url_for('main.dashboard'))
         
-        # If the credentials are invalid, an error message appears and the user is prompted to try again
-        flash('Invalid email or password. Please try again.', 'danger') #Uses Flask's flash function to display an error message to the user in bootstrap's alert format
+        # Show a helpful error if credentials are invalid.
+        flash('Invalid email or password. Please try again.', 'danger')
         
     return render_template('login.html')
 

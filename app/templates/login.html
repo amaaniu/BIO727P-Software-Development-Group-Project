@@ -5,6 +5,7 @@
 {% block footer_class %}fixed-bottom{% endblock %}
 
 {% block content %}
+{# Login form card #}
 <div class="text-center my-4">
   <span class="section-badge section-badge-accent">Sign In and Get Started</span>
 </div>
@@ -36,6 +37,7 @@
   </div>
 </div>
 
+{# Flash messages for authentication feedback #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
