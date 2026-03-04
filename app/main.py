@@ -38,8 +38,8 @@ def user_guide():
 
 @main_bp.route('/user-guide/docs')
 def user_guide_docs_root():
-    """Normalises docs root URL to include trailing slash."""
-    return redirect(url_for('main.user_guide_docs', doc_path='index.html'))
+    """Redirects docs root URL to the docs landing page."""
+    return redirect(url_for('main.user_guide_docs', doc_path='overview/index.html'))
 
 @main_bp.route('/user-guide/docs/')
 @main_bp.route('/user-guide/docs/<path:doc_path>')
@@ -54,6 +54,11 @@ def user_guide_docs(doc_path='index.html'):
         doc_path = f'{doc_path}index.html'
     elif '.' not in Path(doc_path).name:
         doc_path = f'{doc_path}/index.html'
+
+    # Some MkDocs builds do not produce site/index.html if there is no docs/index.md.
+    # In that case, route the docs "index" request to the first nav page.
+    if doc_path == 'index.html' and not (docs_dir / doc_path).exists():
+        doc_path = 'overview/index.html'
 
     return send_from_directory(docs_dir, doc_path)
 
