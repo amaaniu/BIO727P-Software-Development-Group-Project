@@ -2,6 +2,7 @@
 
 {% block content %}
 <style>
+  /* Shared table styling for the UniProt summary card rendered after accession lookup. */
   .uniprot-meta-wrap {
     border: 1px solid #7f96a5;
     border-radius: 10px;
@@ -90,12 +91,13 @@
   }
 </style>
 
+<!-- Three-step upload flow: validate UniProt, then FASTA, then assay data before analysis. -->
 <div class="row justify-content-center">
   <div class="col-12 col-lg-9">
 
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="text-center w-100 mt-4">
-        <span class="section-badge section-badge-accent">Staging</span> 
+        <span class="section-badge section-badge-accent">Upload</span> 
         <h1 class="h1 mb-1">Data upload</h1>
         <p class="h5 text-muted mb-0">
           1) UniProt ID → 2) Plasmid FASTA → 3) JSON/TSV upload
@@ -216,6 +218,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script>
+  // Cache the step containers so the UI can progressively reveal the workflow.
   const step2 = document.getElementById("step2");
   const step3 = document.getElementById("step3");
 
@@ -239,6 +242,7 @@
   let wtSequence = "";
   let experimentId = null;
 
+  // Standardise alert rendering for each step's status region.
   function setStatus(el, type, msg) {
     // type: "success" | "danger" | "info" | "warning"
     el.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${msg}</div>`;
@@ -253,10 +257,12 @@
       .replace(/'/g, "&#39;");
   }
 
+  // Preserve UniProt line breaks when displaying longer annotation text.
   function formatTextBlock(value) {
     return escapeHtml(value).replace(/\n/g, "<br>");
   }
 
+  // Reset every downstream step when the upstream context changes or becomes invalid.
   function resetAll(message="") {
     step2.style.display = "none";
     step3.style.display = "none";
@@ -282,6 +288,7 @@
     else uniprotStatus.innerHTML = "";
   }
 
+  // Show the AlphaFold 3D preview for the validated wild-type protein when available.
   async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -317,6 +324,7 @@
   }
 
   // STEP 1 — UniProt
+  // Step 1 validates the accession and seeds the upload session with wild-type metadata.
   btnFetch.addEventListener("click", async () => {
     const accession = uniprotIdInput.value.trim();
 
@@ -329,6 +337,7 @@
     btnFetch.disabled = true;
 
     // reset downstream steps on new fetch
+    // Reset later steps because a new accession invalidates any previous uploads.
     step2.style.display = "none";
     step3.style.display = "none";
     uniprotDetailsWrap.style.display = "none";
@@ -338,6 +347,7 @@
     dataFileInput.value = "";
 
     // hide Next button
+    // The analysis link is only valid after all three upload steps succeed.
     nextButton.style.display = "none";
     nextButton.href = "#";
 
@@ -357,6 +367,7 @@
       
       experimentId= data.experiment_id;
 
+      // Store the validated WT context so later uploads can be checked against it.
       const wt = data.wt;
       wtSequence = wt.sequence;
       const alphafoldLink = wt.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${wt.accession}`;
@@ -406,6 +417,7 @@
       step2.style.display = "block";
       uniprotDetailsWrap.style.display = "block";
 
+      // Render the metadata and curated annotation summary returned by the backend.
       uniprotSummary.innerHTML = `
         <div class="row g-3 align-items-start">
           <div class="col-12 col-lg-6">
@@ -444,6 +456,7 @@
       await renderAlphaFoldStructure(viewerId, alphafoldPdbUrl, alphafoldLink);
 
             // Feature table
+      // Limit the feature table so the upload page stays compact even for heavily annotated proteins.
       const feats = wt.features || [];
       featureTableBody.innerHTML = "";
 
@@ -482,11 +495,13 @@
   });
 
   // STEP 2 — FASTA
+  // Step 2 validates the uploaded plasmid FASTA against the previously fetched WT protein.
   fastaFileInput.addEventListener("change", async () => {
     step3.style.display = "none";
     dataStatus.innerHTML = "";
 
     // hide Next button when FASTA changes
+    // Any FASTA change invalidates the final analysis link until revalidated.
     nextButton.style.display = "none";
     nextButton.href = "#";
 
@@ -518,6 +533,7 @@
         return;
       }
 
+      // A WT mismatch means the user must restart from UniProt selection to avoid mixed contexts.
       if (!data.wt_check || data.wt_check.match !== true) {
         // your rule: mismatch -> reset
         resetAll("FASTA does not match the WT protein. Start again with UniProt.");
@@ -538,11 +554,13 @@
   });
 
   // STEP 3 — JSON/TSV
+  // Step 3 uploads the assay data and unlocks the analysis route for this experiment.
   dataFileInput.addEventListener("change", async () => {
     const file = dataFileInput.files?.[0];
     if (!file) return;
 
     // hide Next button when data file changes
+    // Recompute the final navigation target whenever the uploaded dataset changes.
     nextButton.style.display = "none";
     nextButton.href = "#";
 
@@ -577,6 +595,7 @@
       );
 
       // SHOW NEXT BUTTON + LINK TO REPORT ROUTE
+      // Only expose the analysis route after the experiment has passed all upload checks.
       nextButton.style.display = "block";
       nextButton.href = `/run-analysis/${experimentId}`;
 
@@ -586,11 +605,13 @@
   });
 
   window.addEventListener("pageshow", (event) => {
+    // Reset cached state when the browser restores this page from back/forward cache.
     if (event.persisted) {
       resetAll("");
     }
   });
 
+  // Start from a clean state so hidden steps do not flash on first render.
   // init clean
   resetAll("");
 </script>

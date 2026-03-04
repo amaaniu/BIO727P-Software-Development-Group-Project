@@ -57,7 +57,7 @@ def user_guide_docs(doc_path='index.html'):
 
     return send_from_directory(docs_dir, doc_path)
 
-# Creates the route for the staging page, which is only accessible to authenticated users.
+# Creates the route for the upload page, which is only accessible to authenticated users.
 @main_bp.route('/upload')
 @login_required
 def upload_data():
@@ -224,5 +224,5 @@ def download_pdf(experiment_id):
 @main_bp.route('/experiments/new')
 @login_required
 def new_experiment():
-    """Renders the page used to start a new experiment."""
+    """Renders the staging page for starting a new experiment."""
     return render_template('upload.html')
