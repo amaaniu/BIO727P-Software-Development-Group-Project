@@ -270,7 +270,22 @@ def api_render_report():
     # ---- 1) Top 10 table ----
     try:
         top10_df = compute_top10(variants_df)
-        selected_variant_id = int(top10_df.iloc[0]["variant_id"]) if not top10_df.empty else None
+        selected_variant_id = None
+        if not top10_df.empty:
+            if "variant_id" in top10_df.columns:
+                selected_variant_id = int(top10_df.iloc[0]["variant_id"])
+            elif (
+                "experiment_variant_id" in top10_df.columns
+                and "experiment_variant_id" in variants_df.columns
+                and "variant_id" in variants_df.columns
+            ):
+                selected_experiment_variant_id = top10_df.iloc[0]["experiment_variant_id"]
+                match = variants_df.loc[
+                    variants_df["experiment_variant_id"] == selected_experiment_variant_id,
+                    "variant_id",
+                ]
+                if not match.empty:
+                    selected_variant_id = int(match.iloc[0])
 
         viz1 = top10_df.to_html(
             index=False,

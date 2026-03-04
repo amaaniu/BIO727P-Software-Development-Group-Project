@@ -262,8 +262,17 @@ def plot_activity_landscape_3d(
     if missing:
         raise ValueError(f"variants_df is missing columns: {sorted(missing)}")
 
-    meta = variants_df[["variant_id", "generation", score_col]].copy()
+    id_cols = ["variant_id", "generation", score_col]
+    if "experiment_variant_id" in variants_df.columns:
+        id_cols.append("experiment_variant_id")
+    meta = variants_df[id_cols].copy()
     meta["variant_id"] = meta["variant_id"].astype(str)
+    if "experiment_variant_id" in meta.columns:
+        meta["display_variant_id"] = meta["experiment_variant_id"].fillna(meta["variant_id"]).astype(str)
+        hover_id_label = "experiment_variant_id"
+    else:
+        meta["display_variant_id"] = meta["variant_id"]
+        hover_id_label = "variant_id"
     meta["generation"] = pd.to_numeric(meta["generation"], errors="coerce")
     meta[score_col] = pd.to_numeric(meta[score_col], errors="coerce")
     meta = meta.dropna(subset=["generation", score_col])
@@ -349,10 +358,10 @@ def plot_activity_landscape_3d(
                 z=df_g["log2_score"],
                 mode="markers",
                 marker=dict(size=sizes, opacity=0.78),
-                text=df_g["variant_id"],
+                text=df_g["display_variant_id"],
                 customdata=np.stack([df_g["generation"], df_g["n_mutations"], df_g["log2_score"]], axis=1),
                 hovertemplate=(
-                    "variant_id=%{text}<br>"
+                    f"{hover_id_label}=%{{text}}<br>"
                     "generation=%{customdata[0]:.0f}<br>"
                     "mutations=%{customdata[1]:.0f}<br>"
                     "activity(log2)=%{customdata[2]:.2f}<br>"
@@ -379,7 +388,7 @@ def plot_activity_landscape_3d(
                 opacity=0.9,
                 line=dict(width=1.2, color="white"),
             ),
-            text=top["variant_id"],
+            text=top["display_variant_id"],
             textposition="top center",
             textfont=dict(size=8),
             name=f"Top {int(top_n)}",

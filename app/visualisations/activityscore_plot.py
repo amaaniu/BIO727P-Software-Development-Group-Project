@@ -56,6 +56,7 @@ def plot_activity_violin(
     gen_order = sorted(tmp["generation"].unique().tolist())
     tmp["generation"] = tmp["generation"].astype(int).astype(str)
     gen_order_str = [str(int(g)) for g in gen_order]
+    hover_data = ["experiment_variant_id"] if "experiment_variant_id" in tmp.columns else None
 
     fig = px.violin(
         tmp,
@@ -64,6 +65,7 @@ def plot_activity_violin(
         category_orders={"generation": gen_order_str},
         box=True,
         points="all" if show_points else False,
+        hover_data=hover_data,
         title=title,
     )
 
