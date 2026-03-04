@@ -19,37 +19,89 @@ def analyse_variant(
     min_aa: int = 200
 ) -> Dict[str, Any]:
 
-    # Identify WT gene
+    """
+    Runs the full analysis pipeline for a directed evolution variant.
+
+    The pipeline performs:
+    1. ORF detection within WT and variant plasmids
+    2. Extraction and translation of the coding DNA sequence (CDS)
+    3. Codon-level mutation comparison between WT and variant
+    4. Activity score calculation normalised to WT control yields
+
+    Returns a structured dictionary used by the database layer and
+    visualisation components of the web portal.
+    """
+
+    # ------------------------------------------------------------------
+    # Step 1: Identify the recombinant gene in the WT plasmid
+    # ------------------------------------------------------------------
+    """
+    1. The ORF detection function scans the plasmid sequence to locate the coding 
+    region corresponding to the recombinant enzyme.
+    2. A minimum amino acid length threshold helps avoid short spurious ORFs.
+    """
+
     wt_gene = identify_recombinant_gene(
         wt_plasmid_sequence,
         circular=circular,
         min_aa=min_aa
     )
 
-    # Identify Variant gene
+    # ------------------------------------------------------------------
+    # Step 2: Identify the recombinant gene in the variant plasmid
+    # ------------------------------------------------------------------
+    """
+    The same ORF detection process is applied to the variant plasmid
+    to ensure the CDS is extracted using identical criteria.
+    """
     var_gene = identify_recombinant_gene(
         variant_plasmid_sequence,
         circular=circular,
         min_aa=min_aa
     )
-
+    # Extract coding DNA sequences from the detected genes
     wt_cds = wt_gene["cds_dna"]
     var_cds = var_gene["cds_dna"]
 
-    # Mutation analysis
+    # ------------------------------------------------------------------
+    # Step 3: Mutation classification
+    # ------------------------------------------------------------------
+    """
+    The WT and variant CDS are compared codon-by-codon.
+    Differences are classified as synonymous or non-synonymous 
+    mutations and stored as structured mutation records.
+    """
+
     mutation_result = classify_mutations_cds(
         wt_cds,
         var_cds,
         generation=int(generation)
     )
 
-    # Activity score
+    # ------------------------------------------------------------------
+    # Step 4: Activity score calculation
+    # ------------------------------------------------------------------
+    """
+    The activity score measures catalytic efficiency relative to WT.
+    # DNA yield is normalised by protein yield to avoid rewarding
+    # variants that simply express more protein.
+    
+    """
+
     activity_result = compute_activity_score_log2(
         dna_yield,
         protein_yield,
         wt_dna_yield,
         wt_protein_yield
     )
+    # ------------------------------------------------------------------
+    # Step 5: Assemble structured analysis output
+    # ------------------------------------------------------------------
+    """
+    The returned dictionary contains WT information, variant information, mutation data, and activity metrics. 
+    This format allows direct integration with the database and visualisation modules of the web portal.
+    
+    """
 
     return {
 
