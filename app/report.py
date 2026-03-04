@@ -5,7 +5,7 @@ Includes report page endpoints, summary/visualization payload helpers, and PDF e
 
 from __future__ import annotations
 
-# Standard Library
+# Standard library
 from urllib.parse import urlparse
 import json
 
