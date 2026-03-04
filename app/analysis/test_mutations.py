@@ -2,12 +2,37 @@ from mutation_tracker import classify_mutations_cds
 from app.uploads.orf_translation import translate_dna
 from activity_score import compute_activity_scores
 
+"""
+Test for the Backend Analysis to verify the functionality of:
+    1. DNA Translation
+    2. Mutation Classification 
+    3. Activity Score Classification
+    4. Full Backend Variant Analysis Pipeline
+
+The test uses small synthetic coding sequences to simulate directed evolution 
+variants with known synonymous and non-synonymous mutations
+
+"""
+# ---- EXAMPLE SEQUENCES FOR TESTING MUTATION CLASSIFICATION ----
+"""
+Construct simple synthetic CDS sequences.
+
+WT sequence:
+ATG (start codon, M)
+GCT repeated → Alanine
+TTC repeated → Phenylalanine
+
+Variant sequence introduces:
+1. Synonymous mutation: GCT → GCC (A → A)
+2. Non-synonymous mutation: TTC → TAC (F → Y)
+"""
+
 # WT CDS (no stop codon)
 wt_cds = "ATG" + "GCT"*5 + "TTC"*5
 
 # Variant CDS
 # GCT -> GCC (synonymous)
-# TTC -> TAC (non-synonymous)
+# TTC -> TAC (non-synonymous)   
 var_cds = "ATG" + "GCC" + "GCT"*4 + "TTC"*4 + "TAC"
 
 print("WT protein:", translate_dna(wt_cds))
@@ -16,6 +41,8 @@ print("VAR protein:", translate_dna(var_cds))
 generation = 1
 
 # ---- MUTATION TRACKER TEST ----
+"""Compare WT and variant CDS to identify synonymous and non-synonymous mutations."""
+
 result = classify_mutations_cds(wt_cds, var_cds, generation)
 
 print("\nSynonymous count:", result["syn_count"])
@@ -27,7 +54,9 @@ for m in result["mutation_records"]:
     print(m)
 
 
-# ---- ACTIVITY SCORE TEST ----
+# ---- ACTIVITY SCORE TEST ---
+"""Compute activity score normalised to WT yields."""
+
 # Example yields
 wt_dna_yield = 100.0
 wt_protein_yield = 50.0
@@ -45,13 +74,9 @@ activity = compute_activity_scores(
 print("\nActivity score results:")
 print(activity)
 
+# ==== FULL BACKEND ANALYSIS ====
 
-
-#=========
-# test_backend_analysis.py
-# Run: python3 test_backend_analysis.py
-
-from backend_analysis import analyse_variant
+from analysis import analyse_variant
 
 
 def make_plasmid_with_orf(cds: str, flank: int = 300) -> str:
