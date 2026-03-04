@@ -6,24 +6,22 @@ def _get_wt_for_generation(
     generation: int,
     wt_by_generation: Mapping[int, Tuple[float, float]],
 ) -> Optional[Tuple[float, float]]:
-    """
-    Baseline rule:
-      - Gen 1 uses Gen 1 WT
-      - Gen g (g>=2) uses Gen (g-1) WT
-    """
+    """Pick the WT baseline (WT DNA, WT protein) for a given generation."""
+    # Validate generation
+
     if generation is None:
         return None
-
     try:
         g = int(generation)
     except (TypeError, ValueError):
-        return None
-
+            return None
     if g <= 0:
-        return None
+            return None
 
+    # Baseline rule: Gen 1 uses Gen 1 WT, Gen g uses Gen (g-1) WT
     baseline_generation = 1 if g == 1 else (g - 1)
 
+    # Lookup returns (wt_dna_yield, wt_protein_yield) or None if missing
     return wt_by_generation.get(baseline_generation)
 
 def compute_activity_score_log2(
@@ -35,18 +33,22 @@ def compute_activity_score_log2(
     """
     Compute log2 activity scores only.
     """
+    # Missing inputs converted into cannot compute 
     if dna_yield is None or protein_yield is None:
             return None
     
     if wt_dna_yield is None or wt_protein_yield is None:
         return None
 
+    # Avoid divsion by zero
     if wt_dna_yield == 0 or wt_protein_yield == 0:
         return None
 
+    # Normalise to WT (dimensionless ratios)
     dna_norm = dna_yield / wt_dna_yield
     protein_norm = protein_yield / wt_protein_yield
 
+    # Avoid invalid ratio/log values
     if protein_norm == 0:
         return None
 
@@ -55,12 +57,12 @@ def compute_activity_score_log2(
     if ratio <= 0:
         return None
 
+    # Return intermediates for transparency/debuggin + fianl score
     return {
         "dna_norm": dna_norm,
         "protein_norm": protein_norm,
         "activity_score_log2": math.log2(ratio),
     }
-
 
 def compute_activity_scores(
     dna_yield: float,
@@ -68,17 +70,15 @@ def compute_activity_scores(
     generation: int,
     wt_by_generation: Mapping[int, Tuple[float, float]]
 ) -> Optional[Dict[str, Any]]:
-    """
-    Automatically selects correct WT baseline based on generation.
-    """
-
+    """Compute activity score using WT baseline selected from the generation rule."""
+    # Select correct WT baseline for this generation
     wt_values = _get_wt_for_generation(generation, wt_by_generation)
-
     if wt_values is None:
         return None
 
     wt_dna_yield, wt_protein_yield = wt_values
 
+    # Compute score using the chosen baseline
     return compute_activity_score_log2(
         dna_yield,
         protein_yield,
