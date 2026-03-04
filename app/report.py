@@ -395,48 +395,10 @@ def download_report_pdf(experiment_id: int):
             # abort(500, description="Report failed to render")
             pass
 
-        # ✅ Convert viz2–viz5 into static images FOR THE PDF ONLY
-        for viz_id in ("viz2", "viz3", "viz4", "viz5"):
-            locator = page.locator(f"#{viz_id}")
-            if locator.count() == 0:
-                continue
-
-            # Ensure visible and laid out
-            locator.wait_for(state="visible", timeout=15_000)
-            locator.scroll_into_view_if_needed()
-            page.wait_for_timeout(300)
-
-            # Screenshot the current rendered chart area
-            screenshot_bytes = locator.screenshot(type="png")
-
-            # Replace the div contents with an <img> so PDF captures a static image
-            page.evaluate(
-                """
-                ({ targetId, pngBytes }) => {
-                  const target = document.getElementById(targetId);
-                  if (!target) return;
-
-                  const bytes = new Uint8Array(pngBytes);
-                  let binary = "";
-                  for (let i = 0; i < bytes.length; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                  }
-                  const dataUrl = "data:image/png;base64," + btoa(binary);
-
-                  target.innerHTML = `
-                    <img src="${dataUrl}"
-                         style="display:block;width:100%;height:auto;max-width:100%;"
-                         alt="Static plot preview" />
-                  `;
-                }
-                """,
-                {"targetId": viz_id, "pngBytes": list(screenshot_bytes)},
-            )
-
         # Print styling
         page.emulate_media(media="print")
 
-        # Wait for all images (including our injected ones) to load
+        # Wait for standard image assets to load before printing
         page.wait_for_function(
             "() => Array.from(document.images).every((img) => img.complete)",
             timeout=30_000

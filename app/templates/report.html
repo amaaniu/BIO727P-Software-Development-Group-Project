@@ -44,27 +44,25 @@
     color: var(--color-foreground);
   }
 
-#reportPage .btn-outline-primary {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
-}
+  #reportPage .btn-outline-primary {
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+  }
 
-#reportPage .btn-outline-primary:hover,
-#reportPage .btn-outline-primary:focus {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-foreground);
+  #reportPage .btn-outline-primary:hover,
+  #reportPage .btn-outline-primary:focus {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
 
-}
-.btn-primary:focus-visible,
-.btn-secondary:focus-visible {
-  box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
-}
-
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
+  }
 
   .alphafold-wrap {
     min-height: 360px;
-    text-align: left;
   }
 
   .alphafold-caption {
@@ -138,10 +136,8 @@
     margin: 8mm;
   }
 
-  /* remove nav/footer/buttons in PDF */
   nav, footer, .navbar, #downloadPdfBtn, .btn { display: none !important; }
 
-  /* use the whole page width */
   html, body { margin: 0 !important; padding: 0 !important; }
   main { margin: 0 !important; padding: 0 !important; }
   .container, .container-fluid {
@@ -165,7 +161,6 @@
     padding: 0 !important;
   }
 
-  /* avoid ugly splits */
   .report-section, .uniprot-meta-wrap, .feature-meta-wrap {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -208,8 +203,8 @@
   }
 
   #viz5Block .plot-print-image img {
-    width: 70%;
-    max-width: 70%;
+    width: 90%;
+    max-width: 90%;
     margin: 0 auto;
   }
 
@@ -217,7 +212,6 @@
     display: none !important;
   }
 
-  /* better colour fidelity */
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
@@ -229,25 +223,24 @@
   data-experiment-id="{{ experiment_id }}"
   data-render-report-url="{{ url_for('report.api_render_report') }}"
 >
-
   <div class="text-center">
-      <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
-      <h1>Report</h1>
-    </div>
+    <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
+    <h1>Report</h1>
+  </div>
 
   <div class="d-flex justify-content-end mb-3">
-  <a
-    id="downloadPdfBtn"
-    class="btn btn-outline-primary"
-    href="{{ url_for('report.download_report_pdf', experiment_id=experiment_id) }}"
-  >
-    Download PDF
-  </a>
+    <a
+      id="downloadPdfBtn"
+      class="btn btn-outline-primary"
+      href="{{ url_for('report.download_report_pdf', experiment_id=experiment_id) }}"
+    >
+      Download PDF
+    </a>
   </div>
-    
-  <!-- RESULTS -->
+
   <div id="resultsBlock" class="card">
     <div class="card-body">
+      <h2 class="h5 mb-3">Report</h2>
 
       <div class="mb-4 d-none report-section" id="summaryBlock">
         <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
@@ -281,8 +274,6 @@
     </div>
   </div>
 </div>
-
-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
@@ -513,7 +504,7 @@
           </div>
         </div>
         <div class="col-12 col-lg-6 summary-col">
-          <div class="alphafold-wrap">
+          <div class="alphafold-wrap mt-2">
             <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
             <div class="small fw-bold alphafold-caption">AlphaFold Preview</div>
             <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
@@ -577,11 +568,9 @@
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
-    // show summary before creating the AlphaFold viewer so 3Dmol can measure the container
     summaryBlock.classList.remove("d-none");
     await renderSummary(out.summary);
 
-    // then visuals
     const viz = out.viz || {};
     for (const item of blocks) {
       item.block.classList.remove("d-none");
@@ -594,7 +583,6 @@
 
   loadReport().catch(err => {
     window.__REPORT_READY__ = "error";
-    // if someone hits view before analysis exists, you can show a friendly message
     resultsBlock.querySelector(".card-body").insertAdjacentHTML(
       "afterbegin",
       `<div class="alert alert-warning mb-3">
