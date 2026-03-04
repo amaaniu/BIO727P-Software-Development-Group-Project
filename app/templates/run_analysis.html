@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- Minimal analysis runner: show progress while the backend generates report data, then redirect. -->
 <div
   id="reportPage"
   class="container py-4"
@@ -35,6 +36,7 @@
 </div>
 
 <script>
+  // Read routing and experiment context injected by Flask into the page container.
   const pageEl = document.getElementById("reportPage");
   const experimentId = Number(pageEl?.dataset?.experimentId);
   const runAnalysisUrl = pageEl?.dataset?.runAnalysisUrl || "/report/api/run-analysis";
@@ -45,6 +47,7 @@
   const title = document.getElementById("statusTitle");
   const text = document.getElementById("statusText");
 
+  // Some server failures return HTML instead of JSON, so surface a short snippet for debugging.
   async function parseJsonResponse(response, fallbackMessage) {
     const text = await response.text();
     try { return JSON.parse(text); }
@@ -54,13 +57,14 @@
     }
   }
 
+  // Keep the progress bar and its accessible label in sync.
   function setPct(pct) {
     bar.style.width = pct + "%";
     bar.setAttribute("aria-valuenow", String(pct));
     label.textContent = pct + "%";
   }
 
-  // Fake progress (unchanged)
+  // Simulated progress keeps the UI responsive while the backend runs a single long request.
   let fakePct = 0;
   const startTs = Date.now();
   const phase1Ms = 25_000;
@@ -88,6 +92,7 @@
     setPct(fakePct);
   }, 100);
 
+  // Kick off analysis on page load, then send the user to the dedicated report page once complete.
   async function runAnalysis() {
     if (!Number.isFinite(experimentId)) throw new Error("Missing or invalid experiment ID.");
 
@@ -115,6 +120,7 @@
     window.location.href = viewReportUrl;
   }
 
+  // On failure, stop animating and leave the error message on the current page.
   runAnalysis().catch(err => {
     clearInterval(fakeTimer);
     bar.classList.remove("progress-bar-animated");

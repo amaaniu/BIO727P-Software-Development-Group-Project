@@ -1,3 +1,9 @@
+"""Endpoints for the staged upload workflow used before running analysis.
+
+This module validates UniProt accessions, stores wild-type metadata, checks
+uploaded plasmid FASTA content against the expected protein, and ingests the
+experiment data files needed for downstream analysis.
+"""
 from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request
@@ -20,12 +26,29 @@ upload_bp = Blueprint("upload", __name__)
 
 @upload_bp.route("/", methods=["GET"])
 @login_required
-def staging_page():
-    return render_template("staging.html")
+def upload_page():
+    """Render the upload workflow page.
+
+    Args:
+        None.
+
+    Returns:
+        Response: Rendered HTML template for the upload page.
+    """
+    return render_template("upload.html")
 
 @upload_bp.route("/api/uniprot", methods=["POST"])
 @login_required
 def api_uniprot():
+    """Validate a UniProt accession and initialise upload state for an experiment.
+
+    Args:
+        None: Reads JSON payload data from the request body.
+
+    Returns:
+        Response: JSON response containing WT metadata, AlphaFold links, and
+        the experiment identifier used by later upload steps.
+    """
     user_id = current_user.user_id
 
     try:
@@ -35,7 +58,7 @@ def api_uniprot():
         if not accession:
             return jsonify({"ok": False, "error": "Please enter a UniProt accession."}), 400
 
-        # 1) Fetch UniProt
+        # 1) Fetch the canonical WT metadata that anchors the rest of the upload workflow.
         data = fetch_uniprot(accession)
         alphafold_link = alphafold_entry_url(data["uniprot_id"])
         alphafold_prediction = fetch_alphafold_prediction(data["uniprot_id"])
@@ -46,7 +69,7 @@ def api_uniprot():
             alphafold_prediction.get("pdbUrl") if alphafold_prediction else None
         )
 
-        # 2) Upsert UniProt metadata (FK: Experiment.uniprot_id -> UniProt_Data.uniprot_id)
+        # 2) Upsert cached UniProt metadata so repeated searches reuse a local copy.
         existing = UniProtData.query.get(data["uniprot_id"])
         if not existing:
             existing = UniProtData(
@@ -65,7 +88,7 @@ def api_uniprot():
             existing.protein_sequence = data["protein_sequence"]
         db.session.commit()
 
-        # 3) Replace features for this accession so repeated fetches do not duplicate rows.
+        # 3) Replace cached feature rows so repeated fetches do not duplicate annotations.
         UniProtFeature.query.filter_by(uniprot_id=data["uniprot_id"]).delete()
         for f in data.get("features", []):
             db.session.add(UniProtFeature(
@@ -78,7 +101,7 @@ def api_uniprot():
         db.session.commit()
 
         # 4) Reuse a draft experiment (awaiting_data with no variants) if one exists.
-        # This avoids creating extra experiment IDs when users restart staging.
+        # This avoids creating extra experiment IDs when users restart upload.
         experiment = (
             db.session.query(Experiment)
             .outerjoin(Variant, Variant.experiment_id == Experiment.experiment_id)
@@ -143,6 +166,14 @@ def api_uniprot():
 @upload_bp.route("/api/validate-fasta", methods=["POST"])
 @login_required
 def api_validate_fasta():
+    """Validate an uploaded plasmid FASTA against the experiment's WT protein.
+
+    Args:
+        None: Reads multipart form data and file uploads from the request.
+
+    Returns:
+        Response: JSON response containing FASTA metadata and WT match results.
+    """
     try:
         if "fastaFile" not in request.files:
             return jsonify({"ok": False, "error": "No FASTA file uploaded (expected 'fastaFile')."}), 400
@@ -168,7 +199,7 @@ def api_validate_fasta():
 
         header, dna_seq = parse_fasta(fasta_text)
 
-        # Translate ORFs and check match
+        # Translate ORFs from the circular plasmid and verify that one matches the WT exactly.
         orfs = six_frame_orfs(dna_seq, circular=True, min_aa=50)
         result = match_wt_exact(orfs, wt_sequence)
 
@@ -194,6 +225,15 @@ def api_validate_fasta():
 @upload_bp.route("/api/upload-data", methods=["POST"])
 @login_required
 def api_upload_data():
+    """Ingest an experiment data file into the database for the current user.
+
+    Args:
+        None: Reads multipart form data and file uploads from the request.
+
+    Returns:
+        Response: JSON response describing the inserted data type, count, and
+        experiment identifier.
+    """
     user_id = current_user.user_id
 
     try:
@@ -202,7 +242,7 @@ def api_upload_data():
 
         file = request.files["dataFile"]
 
-        # 1) Parse once to detect type
+        # 1) Parse once to detect type before handing off to the main insert pipeline.
         parsed = process_file(file)
         file.seek(0)  # IMPORTANT: reset stream
 
@@ -230,6 +270,7 @@ def api_upload_data():
             user_id=current_user.user_id
         )
 
+        # Mark the experiment as active once substantive downstream data has been uploaded.
         if (
             experiment_id
             and result.get("data_type") in {"variant", "mutation", "activity", "control"}

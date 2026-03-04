@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
+  /* Summary metadata table styling for the report header section. */
   .uniprot-meta-wrap {
     border: 1px solid #7f96a5;
     border-radius: 10px;
@@ -130,6 +131,7 @@
     align-items: flex-start;
   }
 
+  /* Print rules keep the exported PDF compact and substitute static images for 3D plots. */
   @media print {
   @page {
     size: A4;
@@ -217,6 +219,7 @@
 
 </style>
 
+<!-- Report shell: hidden sections are progressively revealed once the page has rendered. -->
 <div
   id="reportPage"
   class="container py-4"
@@ -278,6 +281,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
+  // Exposed for PDF/export flows that wait for the report to finish rendering.
   window.__REPORT_READY__ = false;
 
   const pageEl = document.getElementById("reportPage");
@@ -298,6 +302,7 @@
     { block: document.getElementById("viz5Block"), el: document.getElementById("viz5"), key: "viz5" },
   ];
 
+  // Some backend errors return HTML instead of JSON, so we capture a short snippet for debugging.
   async function parseJsonResponse(response, fallbackMessage) {
     const text = await response.text();
     try { return JSON.parse(text); }
@@ -319,6 +324,7 @@
     throw lastErr || new Error("Fetch failed");
   }
 
+  // Rebuild inline <script> tags because assigning innerHTML alone will not execute them.
   function setHtmlWithScripts(target, html) {
     target.innerHTML = "";
     const template = document.createElement("template");
@@ -337,6 +343,7 @@
     }
   }
 
+  // Restyle feature tables returned as plain HTML so they match the report summary tables.
   function applyUploadTableStyle(target) {
     const table = target.querySelector("table");
     if (!table) return;
@@ -355,6 +362,7 @@
     }
   }
 
+  // Render the AlphaFold viewer when possible, otherwise fall back to the static preview image.
   async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink, imageUrl) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -409,6 +417,7 @@
     }
   }
 
+  // 3D Plotly traces do not print reliably, so they need a static image fallback.
   function isThreeDimensionalFigure(fig) {
     const traces = Array.isArray(fig?.data) ? fig.data : [];
     return traces.some((trace) => {
@@ -417,6 +426,7 @@
     });
   }
 
+  // Capture a rasterised version of interactive plots for the print stylesheet to show in PDFs.
   async function attachPrintImage(target, fig) {
     if (!window.Plotly) return;
 
@@ -442,6 +452,7 @@
     }
   }
 
+  // Build the summary section from the structured payload returned by the report API.
   async function renderSummary(summary) {
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
@@ -540,6 +551,7 @@
     );
   }
 
+  // Each visualisation can arrive as a Plotly payload or as pre-rendered HTML from the backend.
   async function renderViz(target, payload) {
     if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
       target.innerHTML = "";
@@ -560,6 +572,7 @@
     applyUploadTableStyle(target);
   }
 
+  // Main load pipeline: fetch the rendered report, reveal each section, then mark the page as ready.
   async function loadReport() {
     if (!Number.isFinite(experimentId)) throw new Error("Missing or invalid experiment ID.");
 
@@ -581,6 +594,7 @@
     window.__REPORT_READY__ = true;
   }
 
+  // Keep the page usable if rendering fails or the report is not available yet.
   loadReport().catch(err => {
     window.__REPORT_READY__ = "error";
     resultsBlock.querySelector(".card-body").insertAdjacentHTML(

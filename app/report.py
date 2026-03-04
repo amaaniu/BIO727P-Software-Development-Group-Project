@@ -1,5 +1,10 @@
 # app/report.py
 """
+Endpoints and helpers for building the analysis report experience.
+
+This module serves the interactive report page, assembles summary and
+visualisation payloads from database-backed analysis outputs, and renders
+the final report as a PDF for download.
 
 """
 from __future__ import annotations
@@ -34,6 +39,14 @@ report_bp = Blueprint("report", __name__)
 @report_bp.get("/<int:experiment_id>")
 @login_required
 def view_report(experiment_id: int):
+    """Render the report page shell for a user's experiment.
+
+    Args:
+        experiment_id: Database identifier for the experiment to display.
+
+    Returns:
+        Response: Rendered HTML template for the report page.
+    """
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
@@ -46,6 +59,14 @@ def view_report(experiment_id: int):
 @report_bp.route("/api/summary", methods=["GET"])
 @login_required
 def api_summary():
+    """Return a lightweight summary payload for report consumers.
+
+    Args:
+        None: Reads ``experiment_id`` from the request query string.
+
+    Returns:
+        Response: JSON response containing variant summary rows or an error.
+    """
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
@@ -65,7 +86,7 @@ def api_summary():
     if not variants:
         return jsonify({"ok": False, "error": "No variants found"}), 404
 
-    # Only return fields needed for plotting + table
+    # Only return the fields the frontend summary and tables actually consume.
     rows = []
     for v in variants:
         rows.append({
@@ -82,12 +103,29 @@ def api_summary():
 
 
 def _fig_to_payload(fig):
+    """Convert a Plotly figure into a JSON-safe response payload.
+
+    Args:
+        fig: Plotly figure object or ``None``.
+
+    Returns:
+        dict | None: Payload wrapper for Plotly figures, or ``None`` when no
+        figure was supplied.
+    """
     if fig is None:
         return None
     # fig.to_plotly_json() can include numpy arrays; round-trip via JSON to make it Flask-jsonify safe.
     return {"type": "plotly", "figure": json.loads(fig.to_json())}
 
 def get_lineage_chain(leaf_variant):
+    """Follow parent links to build a lineage chain from root to leaf.
+
+    Args:
+        leaf_variant: Final ``Variant`` object whose ancestry should be traced.
+
+    Returns:
+        list: Ordered lineage of ``Variant`` objects from root to leaf.
+    """
     """
     Return lineage from root -> leaf following parent links.
     """
@@ -107,6 +145,14 @@ def get_lineage_chain(leaf_variant):
 
 
 def build_introduced_mutations_df(lineage_chain):
+    """Create a dataframe of mutations first introduced at each lineage step.
+
+    Args:
+        lineage_chain: Ordered lineage of ``Variant`` objects.
+
+    Returns:
+        pandas.DataFrame: Rows describing newly introduced mutations by generation.
+    """
     """
     Build a dataframe of mutations introduced per generation along a lineage.
 
@@ -135,6 +181,7 @@ def build_introduced_mutations_df(lineage_chain):
 
         return {(int(m.position), str(m.wt_residue), str(m.mutant_residue)) for m in muts}
 
+    # Compare each variant to its actual parent so branching lineages remain correct.
     rows = []
     for v in chain:
         cur = _keys(v)
@@ -159,6 +206,15 @@ def build_introduced_mutations_df(lineage_chain):
 @report_bp.route("/api/render-report", methods=["GET"])
 @login_required
 def api_render_report():
+    """Assemble the full report payload for the frontend report template.
+
+    Args:
+        None: Reads ``experiment_id`` from the request query string.
+
+    Returns:
+        Response: JSON response containing summary metadata and rendered
+        visualisation payloads or error information.
+    """
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
@@ -214,6 +270,7 @@ def api_render_report():
             .tolist()
         )
 
+    # Normalise the accession before querying cached UniProt metadata tables.
     normalized_uniprot_id = (exp.uniprot_id or "").strip().upper()
     uniprot = (
         UniProtData.query
@@ -252,6 +309,7 @@ def api_render_report():
             .all()
         )
     ]
+    # Summary is shaped to match the report.html renderer directly.
     summary = {
         "experiment_name": getattr(exp, "experiment_name", None),
         "accession": exp.uniprot_id,
@@ -267,6 +325,7 @@ def api_render_report():
         "features": features,
     }
 
+    # Each visual block is isolated so one failed chart does not block the whole report.
     # ---- 1) Top 10 table ----
     try:
         top10_df = compute_top10(variants_df)
@@ -348,6 +407,14 @@ def api_render_report():
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
+    """Render a user's report page to PDF using Playwright.
+
+    Args:
+        experiment_id: Database identifier for the experiment to export.
+
+    Returns:
+        Response: PDF download response for the rendered report.
+    """
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
@@ -376,6 +443,7 @@ def download_report_pdf(experiment_id: int):
         if session_cookies:
             context.add_cookies(session_cookies)
 
+        # Render the same authenticated browser view the user sees in HTML.
         page = context.new_page()
 
         # Load the report page and wait for network to settle
