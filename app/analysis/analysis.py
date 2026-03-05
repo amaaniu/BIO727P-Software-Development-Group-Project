@@ -83,8 +83,8 @@ def analyse_variant(
     # ------------------------------------------------------------------
     """
     The activity score measures catalytic efficiency relative to WT.
-    # DNA yield is normalised by protein yield to avoid rewarding
-    # variants that simply express more protein.
+    DNA yield is normalised by protein yield to avoid rewarding
+    variants that simply express more protein.
     
     """
 
