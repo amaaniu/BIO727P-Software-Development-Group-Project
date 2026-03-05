@@ -21,10 +21,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================
 # 1) DATA SOURCES (JSON loaders)
-# =============================================================================
 
 def _ensure_exists(path: str | Path, label: str) -> Path:
     p = Path(path)
@@ -111,10 +108,7 @@ def get_mutations(source: str | Path | int) -> pd.DataFrame:
     return load_mutations_from_json(source)
 
 
-# =============================================================================
 # 2) BACKEND EXPORT HELPERS (DB -> list[dict])
-# =============================================================================
-
 
 _WT_LABELS = {"wt", "wildtype", "wild_type", "wild-type", "control_wt"}
 

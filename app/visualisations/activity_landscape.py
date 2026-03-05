@@ -11,7 +11,7 @@ def _build_position_feature_matrix(
     all_variant_ids: pd.Index,
 ) -> pd.DataFrame:
     """
-    Convert mutation records into a binary feature matrix (variant × position).
+    Convert mutation records into a binary feature matrix (variant x position).
 
     Each column represents one mutated position ("pos_<int>").
     Variants with no mutations get an all-zero row.
