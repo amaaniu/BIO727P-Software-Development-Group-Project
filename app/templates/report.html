@@ -623,7 +623,6 @@
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
-<<<<<<< HEAD
     top10ExperimentVariantIds = Array.isArray(out.top10_experiment_variant_ids)
       ? out.top10_experiment_variant_ids.map((v) => Number(v)).filter(Number.isFinite)
       : [];
@@ -650,8 +649,6 @@
     }
 
     // show summary before creating the AlphaFold viewer so 3Dmol can measure the container
-=======
->>>>>>> 3c8c170a733c961581e7cb57451901340dd96523
     summaryBlock.classList.remove("d-none");
     await renderSummary(out.summary);
 
