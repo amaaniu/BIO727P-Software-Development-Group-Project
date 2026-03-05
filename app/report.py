@@ -270,49 +270,18 @@ def api_render_report():
     # ---- 1) Top 10 table ----
     try:
         top10_df = compute_top10(variants_df)
-
-        # Collect Top10 IDs for UI selection (prefer experiment_variant_id for consistency)
-        top10_experiment_variant_ids: list[int] = []
-        if not top10_df.empty:
-            if "experiment_variant_id" in top10_df.columns:
-                top10_experiment_variant_ids = [
-                    int(x) for x in top10_df["experiment_variant_id"].dropna().tolist()
-                ]
-            elif "variant_id" in top10_df.columns and "experiment_variant_id" in variants_df.columns:
-                # Map top10 variant_id -> experiment_variant_id for UI display/selection
-                idmap = (
-                    variants_df.loc[:, ["variant_id", "experiment_variant_id"]]
-                    .dropna(subset=["variant_id", "experiment_variant_id"])
-                    .drop_duplicates(subset=["variant_id"])
-                    .set_index("variant_id")["experiment_variant_id"]
-                    .to_dict()
-                )
-                top10_experiment_variant_ids = [
-                    int(idmap[v]) for v in top10_df["variant_id"].dropna().tolist() if v in idmap
-                ]
-
-        # Default selection = first top performer (experiment_variant_id)
-        selected_fp_experiment_variant_id = (
-            top10_experiment_variant_ids[0] if top10_experiment_variant_ids else None
-        )
-
-        # Optional override from UI, but only if it's in the Top10 list
-        requested_fp_experiment_variant_id = request.args.get(
-            "fingerprint_experiment_variant_id",
-            type=int
-        )
-        if (
-            requested_fp_experiment_variant_id is not None
-            and requested_fp_experiment_variant_id in top10_experiment_variant_ids
-        ):
-            selected_fp_experiment_variant_id = requested_fp_experiment_variant_id
-
-        # Map experiment_variant_id -> true Variant.variant_id for lineage traversal
         selected_variant_id = None
-        if selected_fp_experiment_variant_id is not None:
-            if "experiment_variant_id" in variants_df.columns and "variant_id" in variants_df.columns:
+        if not top10_df.empty:
+            if "variant_id" in top10_df.columns:
+                selected_variant_id = int(top10_df.iloc[0]["variant_id"])
+            elif (
+                "experiment_variant_id" in top10_df.columns
+                and "experiment_variant_id" in variants_df.columns
+                and "variant_id" in variants_df.columns
+            ):
+                selected_experiment_variant_id = top10_df.iloc[0]["experiment_variant_id"]
                 match = variants_df.loc[
-                    variants_df["experiment_variant_id"] == selected_fp_experiment_variant_id,
+                    variants_df["experiment_variant_id"] == selected_experiment_variant_id,
                     "variant_id",
                 ]
                 if not match.empty:
@@ -323,12 +292,9 @@ def api_render_report():
             classes="table table-sm align-middle mb-0 feature-meta-table",
             border=0,
         )
-
     except Exception as e:
         viz1 = f"<p class='text-danger'>Top10 failed: {e}</p>"
         selected_variant_id = None
-        top10_experiment_variant_ids = []
-        selected_fp_experiment_variant_id = None
 
     # ---- 2) Activity score plot ----
     try:
@@ -363,7 +329,7 @@ def api_render_report():
                 fig4 = plot_mutation_fingerprint(
                     introduced_df,
                     protein_length=selected_protein_length,
-                    title=f"Mutation fingerprint (introduced per generation) - variant {selected_fp_experiment_variant_id}",
+                    title=f"Mutation fingerprint (introduced per generation) - variant {selected_variant_id}",
                 )
                 viz4 = _fig_to_payload(fig4)
         else:
@@ -390,9 +356,7 @@ def api_render_report():
     return jsonify({
         "ok": True,
         "summary": summary,
-        "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5},
-        "top10_experiment_variant_ids": top10_experiment_variant_ids,
-        "selected_fingerprint_experiment_variant_id": selected_fp_experiment_variant_id,
+        "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5}
     })
 
 
@@ -407,17 +371,7 @@ def download_report_pdf(experiment_id: int):
     if not exp:
         abort(404, description="Experiment not found")
 
-    selected_fp_experiment_variant_id = request.args.get(
-        "fingerprint_experiment_variant_id",
-        type=int,
-    )
     report_url = url_for("report.view_report", experiment_id=experiment_id, _external=True)
-    if selected_fp_experiment_variant_id is not None:
-        sep = "&" if "?" in report_url else "?"
-        report_url = (
-            f"{report_url}{sep}"
-            f"fingerprint_experiment_variant_id={selected_fp_experiment_variant_id}"
-        )
     parsed_report_url = urlparse(report_url)
 
     with sync_playwright() as p:
@@ -443,13 +397,13 @@ def download_report_pdf(experiment_id: int):
         # Load the report page and wait for network to settle
         page.goto(report_url, wait_until="networkidle")
 
-        # Wait for your JS to finish rendering (set in report.html)
+        # Wait for JS to finish rendering (set in report.html)
         page.wait_for_function(
             "() => window.__REPORT_READY__ === true || window.__REPORT_READY__ === 'error'",
             timeout=90_000
         )
 
-        # Optional: fail fast (or still generate an error PDF)
+        # fail fast (or still generate an error PDF)
         state = page.evaluate("() => window.__REPORT_READY__")
         if state == "error":
             # You can raise here if you want:
@@ -457,7 +411,7 @@ def download_report_pdf(experiment_id: int):
             # abort(500, description="Report failed to render")
             pass
 
-        # ✅ Convert viz2–viz5 into static images FOR THE PDF ONLY
+        # Convert viz2–viz5 into static images FOR THE PDF ONLY
         for viz_id in ("viz2", "viz3", "viz4", "viz5"):
             locator = page.locator(f"#{viz_id}")
             if locator.count() == 0:
