@@ -5,6 +5,7 @@
 {% block footer_class %}fixed-bottom{% endblock %}
 
 {% block content %}
+{# Registration form card #}
 <div class="text-center my-4">
   <span class="section-badge section-badge-accent">Create Your Account</span>
 </div>
@@ -44,6 +45,7 @@
   </div>
 </div>
 
+{# Flash messages for registration feedback #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}

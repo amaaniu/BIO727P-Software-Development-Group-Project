@@ -1,4 +1,4 @@
-# This file defines the routes for the main blueprint of the Flask application. It includes routes for the home page, features page, user guide page, and dashboard page. The dashboard page is protected by a login_required decorator, meaning that only authenticated users can access it. The routes will render the appropriate templates for each page.
+"""Routes for the main blueprint, including dashboard and user-guide docs."""
 from pathlib import Path
 from flask import Blueprint, render_template, request, abort, current_app, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
@@ -32,23 +32,17 @@ def documentation():
 # Creates the route for the user guide page and the MkDocs documentation sub-routes.
 # The user_guide_docs route serves the built MkDocs documentation.
 @main_bp.route('/user-guide')
-@main_bp.route('/tutorial')
 def user_guide():
     """Renders the user guide page."""
     return render_template('tutorial.html')
 
-
 @main_bp.route('/user-guide/docs')
-@main_bp.route('/tutorial/docs')
 def user_guide_docs_root():
-    """Normalises docs root URL to include trailing slash."""
-    return redirect(url_for('main.user_guide_docs', doc_path='index.html'))
-
+    """Redirects docs root URL to the docs landing page."""
+    return redirect(url_for('main.user_guide_docs', doc_path='overview/index.html'))
 
 @main_bp.route('/user-guide/docs/')
 @main_bp.route('/user-guide/docs/<path:doc_path>')
-@main_bp.route('/tutorial/docs/')
-@main_bp.route('/tutorial/docs/<path:doc_path>')
 def user_guide_docs(doc_path='index.html'):
     """Serves built MkDocs pages under the user guide route."""
     docs_dir = Path(current_app.root_path).parent / 'site'
@@ -61,17 +55,21 @@ def user_guide_docs(doc_path='index.html'):
     elif '.' not in Path(doc_path).name:
         doc_path = f'{doc_path}/index.html'
 
+    # Some MkDocs builds do not produce site/index.html if there is no docs/index.md.
+    # In that case, route the docs "index" request to the first nav page.
+    if doc_path == 'index.html' and not (docs_dir / doc_path).exists():
+        doc_path = 'overview/index.html'
+
     return send_from_directory(docs_dir, doc_path)
 
-# Creates the route for the staging page, which is only accessible to authenticated users.
+# Creates the route for the upload page, which is only accessible to authenticated users.
 @main_bp.route('/upload')
 @login_required
 def upload_data():
     """Route for uploading experimental data."""
     return render_template('upload.html')
 
-# Creates the route for the dashboard page, which is only accessible to authenticated users. 
-# The dashboard route retrieves and processes experiment data for the logged-in user, allowing them to view and manage their directed evolution campaigns. It supports filtering, searching, and sorting of experiments based on various criteria such as status, name, generation count, and last updated time. The processed data is then passed to the dashboard template for rendering.
+# Creates the authenticated dashboard route with filtering, searching, and sorting.
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -179,7 +177,7 @@ def dashboard():
         'completed': sum(1 for exp in all_experiments if exp['status'] == 'Completed'),
     }
 
-    # 7. Applies the selected status filter to the list of experiments, allowing the user to view only experiments that match the chosen status category (e.g., all, staged, in-progress, completed). The filtered list of experiments is then passed to the dashboard template for rendering, along with the summary totals and current filter/sort settings for display on the dashboard page.
+    # 6. Applies the selected status filter and passes results to the template.
     if status_filter == 'all':
         experiments = all_experiments
     else:
@@ -197,7 +195,7 @@ def dashboard():
         sort_dir=sort_dir,
     )
 
-
+# Creates the route for viewing an experiment report. The route checks if the experiment belongs to the logged-in user and redirects to the report view if it exists, otherwise it returns a 404 error.
 @main_bp.route('/experiments/<int:experiment_id>/report')
 @login_required
 def view_report(experiment_id):
@@ -212,9 +210,11 @@ def view_report(experiment_id):
         abort(404)
     return redirect(url_for('report.view_report', experiment_id=experiment_id))
 
+# Creates the route for downloading an experiment report as a PDF. The route checks if the experiment belongs to the logged-in user and redirects to the PDF download view if it exists, otherwise it returns a 404 error.
 @main_bp.route('/experiments/<int:experiment_id>/download_pdf')
 @login_required
 def download_pdf(experiment_id):
+    """Redirects to report PDF download for an experiment owned by the logged-in user."""
     experiment = db.session.scalar(
         db.select(Experiment).where(
             Experiment.experiment_id == experiment_id,
@@ -225,7 +225,9 @@ def download_pdf(experiment_id):
         abort(404)
     return redirect(url_for('report.download_report_pdf', experiment_id=experiment_id))
 
+# Creates the route for starting a new experiment. The route renders the staging page where users can upload their experimental data to start a new directed evolution campaign.
 @main_bp.route('/experiments/new')
 @login_required
 def new_experiment():
-    return render_template('staging.html')
+    """Renders the staging page for starting a new experiment."""
+    return render_template('upload.html')

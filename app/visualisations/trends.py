@@ -47,6 +47,21 @@ def summarise_activity_by_generation(df: pd.DataFrame, score_col: str) -> pd.Dat
         .reset_index()
         .sort_values("generation")
     )
+
+    if "experiment_variant_id" in tmp.columns:
+        labels = (
+            tmp.dropna(subset=["experiment_variant_id"])
+            .groupby("generation")["experiment_variant_id"]
+            .apply(
+                lambda s: (
+                    ", ".join(s.astype(str).head(5))
+                    + (" ..." if len(s) > 5 else "")
+                )
+            )
+            .rename("example_experiment_variant_ids")
+            .reset_index()
+        )
+        summary = summary.merge(labels, on="generation", how="left")
     return summary
 
 
@@ -108,6 +123,17 @@ def plot_activity_median_trend(
             )
         )
 
+    median_trace_kwargs = {}
+    if "example_experiment_variant_ids" in summary.columns:
+        median_trace_kwargs = {
+            "customdata": summary["example_experiment_variant_ids"],
+            "hovertemplate": (
+                "Generation=%{x}<br>"
+                "Median=%{y:.2f}<br>"
+                "Example experiment_variant_id(s)=%{customdata}<extra></extra>"
+            ),
+        }
+
     fig.add_trace(
         go.Scatter(
             x=summary["generation"],
@@ -116,6 +142,7 @@ def plot_activity_median_trend(
             name="Median",
             line=dict(color=median_colour, width=3),
             marker=dict(color=median_colour, size=6),
+            **median_trace_kwargs,
         )
     )
 

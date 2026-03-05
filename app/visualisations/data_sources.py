@@ -21,10 +21,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================
 # 1) DATA SOURCES (JSON loaders)
-# =============================================================================
 
 def _ensure_exists(path: str | Path, label: str) -> Path:
     p = Path(path)
@@ -111,10 +108,7 @@ def get_mutations(source: str | Path | int) -> pd.DataFrame:
     return load_mutations_from_json(source)
 
 
-# =============================================================================
 # 2) BACKEND EXPORT HELPERS (DB -> list[dict])
-# =============================================================================
-
 
 _WT_LABELS = {"wt", "wildtype", "wild_type", "wild-type", "control_wt"}
 
@@ -205,6 +199,7 @@ def fetch_variant_summary(experiment_id: int) -> List[Dict[str, Any]]:
         rows.append(
             {
                 "variant_id": v.variant_id,
+                "experiment_variant_id": getattr(v, "experiment_variant_id", None),
                 "generation": gen,
                 "plasmid_variant_index": getattr(v, "plasmid_variant_index", None),
                 "dna_yield": v.dna_yield,
@@ -353,7 +348,16 @@ def main(argv: Optional[list[str]] = None) -> None:
         from visualisation.mutation_fingerprint import plot_mutation_fingerprint  # type: ignore
         from visualisation.activity_landscape_3d import plot_activity_landscape_3d  # type: ignore
 
-        best_variant_id = top10.loc[0, "variant_id"]
+        if "variant_id" in top10.columns:
+            best_variant_id = top10.loc[0, "variant_id"]
+        elif "experiment_variant_id" in top10.columns and "experiment_variant_id" in variants_df.columns:
+            best_experiment_variant_id = top10.loc[0, "experiment_variant_id"]
+            best_variant_id = variants_df.loc[
+                variants_df["experiment_variant_id"] == best_experiment_variant_id,
+                "variant_id",
+            ].iloc[0]
+        else:
+            raise ValueError("Top10 output is missing both 'variant_id' and 'experiment_variant_id'.")
 
         # Get protein length from variants dataframe
         row = variants_df.loc[variants_df["variant_id"] == best_variant_id].iloc[0]
