@@ -309,6 +309,19 @@
     : null;
   let isRenderingReport = false;
 
+  function syncFingerprintParamInUrl() {
+    const url = new URL(window.location.href);
+    if (Number.isInteger(selectedFingerprintExperimentVariantId)) {
+      url.searchParams.set(
+        "fingerprint_experiment_variant_id",
+        String(selectedFingerprintExperimentVariantId)
+      );
+    } else {
+      url.searchParams.delete("fingerprint_experiment_variant_id");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }
+
   function updateDownloadPdfLink() {
     if (!downloadPdfBtn) return;
     const rawHref = downloadPdfBtn.getAttribute("href") || "";
@@ -630,6 +643,7 @@
       ? Number(out.selected_fingerprint_experiment_variant_id)
       : null;
     updateDownloadPdfLink();
+    syncFingerprintParamInUrl();
 
     if (fingerprintSelectWrap && fingerprintVariantSelect) {
       if (top10ExperimentVariantIds.length) {
@@ -670,6 +684,7 @@
       const v = Number(ev.target.value);
       selectedFingerprintExperimentVariantId = Number.isFinite(v) ? v : null;
       updateDownloadPdfLink();
+      syncFingerprintParamInUrl();
       await loadReport();
     });
   }
