@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}D-E Web Monitoring Portal{% endblock %}
+{% block body_class %}home-page{% endblock %}
+
+{% block content %}
+<div class="p-4">
+  <div class="text-center">
+    <h1 class="h1 fw-bold mb-2">
+      Directed Evolution Monitoring & Analytics
+    </h1>
+    <h5 class="text-muted mb-3">
+      Provides monitoring and analytics tools for researchers participating in directed evolution experiments, for faster and more informed decision-making.
+      Track evolutionary trajectories, variant libraries, and mutations across cycles. Free access for all.
+    </h5>
+    <div class="d-flex flex-wrap justify-content-center gap-3">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 home-cta-btn" role="button" aria-pressed="true">Register</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4 home-cta-btn" role="button" aria-pressed="true">Login</a>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid py-1">
+  <section class="container-fluid my-3">
+    <div class="text-center">
+      <span class="section-badge section-badge-accent">Platform Features</span>
+      <h4>Core highlights for rapid analysis. For full details, visit the features page.</h4>
+    </div>
+    <div class="row g-4 m-2">
+      <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4">
+            <div class="feature-icon">
+              <i class="bi bi-check-circle h1 text-primary"></i>
+            </div>
+            <h5 class="fw-bold">Plasmid Validation</h5>
+            <p class="card-text mb-0">Confirm that the desired wild-type protein is encoded in the plasmid FASTA data.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4">
+            <div class="feature-icon">
+              <i class="bi bi-calculator h1 text-primary"></i>
+            </div>
+            <h5 class="fw-bold">Activity Score Calculation</h5>
+            <p class="card-text mb-0">Calculates and records the activity score of each polymerase variant.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4">
+            <div class="feature-icon">
+              <i class="bi bi-file-earmark-bar-graph h1 text-primary"></i>
+            </div>
+            <h5 class="fw-bold">Comprehensive Reports</h5>
+            <p class="card-text mb-0">Generate and export comprehensive reports on your study.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-3">
+      <a href="{{ url_for('main.features') }}" class="btn btn-primary home-features-btn">See all features</a>
+    </div>
+  </section>
+
+  <section class="container text-center mb-3">
+    <span class="section-badge section-badge-accent">Workflow</span>
+    <h4>Discover Insights from Data with our system</h4>
+
+    <div class="row g-4 m-2">
+      <div class="col-md-6 col-lg-3 position-relative">
+        <div class="card border-0 shadow-sm h-100 workflow-step-card">
+          <div class="card-body p-4">
+            <div class="workflow-step-number">1</div>
+            <i class="bi bi-shield-lock h1 text-primary"></i>
+            <h5 class="mt-3 text-dark fw-bold">Sign In Securely</h5>
+            <p class="text-muted">Log in with your email and password to access the app and your work.</p>
+          </div>
+        </div>
+        <i class="bi bi-arrow-right-circle-fill workflow-arrow d-none d-lg-inline-block" aria-hidden="true"></i>
+      </div>
+
+      <div class="col-md-6 col-lg-3 position-relative">
+        <div class="card border-0 shadow-sm h-100 workflow-step-card">
+          <div class="card-body p-4">
+            <div class="workflow-step-number">2</div>
+            <i class="bi bi-upload h1 text-primary"></i>
+            <h5 class="mt-3 text-dark fw-bold">Upload Your Data</h5>
+            <p class="text-muted">Upload plasmid or FASTA files, or pull protein data directly from trusted databases.</p>
+          </div>
+        </div>
+        <i class="bi bi-arrow-right-circle-fill workflow-arrow d-none d-lg-inline-block" aria-hidden="true"></i>
+      </div>
+
+      <div class="col-md-6 col-lg-3 position-relative">
+        <div class="card border-0 shadow-sm h-100 workflow-step-card">
+          <div class="card-body p-4">
+            <div class="workflow-step-number">3</div>
+            <i class="bi bi-graph-up h1 text-primary"></i>
+            <h5 class="mt-3 text-dark fw-bold">Analyse Sequences</h5>
+            <p class="text-muted">Use our suite of tools to analyse evolution, variant libraries, and mutations across cycles.</p>
+          </div>
+        </div>
+        <i class="bi bi-arrow-right-circle-fill workflow-arrow d-none d-lg-inline-block" aria-hidden="true"></i>
+      </div>
+
+      <div class="col-md-6 col-lg-3 position-relative">
+        <div class="card border-0 shadow-sm h-100 workflow-step-card">
+          <div class="card-body p-4">
+            <div class="workflow-step-number">4</div>
+            <i class="bi bi-bar-chart-line h1 text-primary"></i>
+            <h5 class="mt-3 text-dark fw-bold">Explore Results</h5>
+            <p class="text-muted">View ranked results, performance scores, and interactive visuals.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-3">
+      <a href="{{ url_for('main.user_guide') }}" class="btn btn-primary home-features-btn">Open user guide</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

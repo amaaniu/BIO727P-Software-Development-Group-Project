@@ -1,0 +1,32 @@
+name: myenv
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - plotly
+  - biopython
+  - flask
+  - sqlalchemy
+  - werkzeug
+  - requests
+  - python-dotenv
+  - ipykernel
+  - tqdm
+  - pip
+  - pip:
+      - flask-sqlalchemy
+      - flask-login
+      - thefuzz[speedup]
+      - mkdocs
+      - mkdocs-material
+      - mkdocs-material-extensions
+      - kaleido
+      - playwright
+
+
+
+

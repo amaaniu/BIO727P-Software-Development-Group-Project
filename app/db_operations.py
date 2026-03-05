@@ -1,0 +1,299 @@
+# db_operations.py
+
+from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
+from datetime import datetime
+import json
+
+def insert_experiment_records(records, user_id):
+    """
+    Insert experiment records into database.
+    
+    Args:
+        records: List of experiment dicts from file_processor
+        user_id: ID of user creating experiments
+        
+    Returns:
+        List of created Experiment objects with experiment_id populated
+    """
+    experiment_objects = []
+    
+    for record in records:
+        experiment = Experiment(
+            user_id=user_id,
+            experiment_name=record['experiment_name'],
+            uniprot_id=record['uniprot_id'],
+            wt_protein_sequence=record.get('wt_protein_sequence'),
+            plasmid_sequence=record.get('plasmid_sequence'),
+            status=record.get('status'),
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(experiment)
+        experiment_objects.append(experiment)
+    
+    db.session.commit()
+    return experiment_objects
+
+def insert_uniprot_records(records):
+    """
+    Insert UniProt records into database.
+
+    Args:
+        records: Dict containing UniProt data
+
+    Returns:
+        Created UniProtData object
+    """
+    uniprot = UniProtData(
+        uniprot_id=records['uniprot_id'],
+        protein_name=records.get('protein_name'),
+        organism_name=records.get('organism_name'),
+        protein_length=records['protein_length'],
+        protein_sequence=records['protein_sequence']
+    )
+
+    db.session.add(uniprot)
+    db.session.commit()
+
+    return uniprot
+
+def insert_uniprot_feature_records(records, uniprot_id):
+    """
+    Insert UniProt feature records into database.
+
+    Args:
+        records: List of feature dicts
+        uniprot_id: UniProt accession ID
+
+    Returns:
+        List of created UniProtFeature objects
+    """
+    feature_objects = []
+
+    UniProtFeature.query.filter_by(uniprot_id=uniprot_id).delete()
+
+    for record in records:
+        feature = UniProtFeature(
+            uniprot_id=uniprot_id,
+            feature_type=record['feature_type'],
+            description=record.get('description'),
+            start_pos=record.get('start_pos'),
+            end_pos=record.get('end_pos')
+        )
+
+        db.session.add(feature)
+        feature_objects.append(feature)
+
+    db.session.commit()
+    return feature_objects
+
+def update_experiment_plasmid(experiment_id, plasmid_sequence, user_id, status=None):
+    """
+    Update plasmid sequence for an experiment.
+
+    Args:
+        experiment_id: Experiment ID
+        plasmid_sequence: DNA sequence string
+
+    Returns:
+        Updated Experiment object
+    """
+    experiment = Experiment.query.filter_by(experiment_id=experiment_id, user_id=user_id).first()
+
+    if not experiment:
+        raise ValueError("Experiment not found")
+
+    experiment.plasmid_sequence = plasmid_sequence
+
+    if status:
+        experiment.status = status
+
+    db.session.commit()
+    return experiment
+
+def insert_variant_records(records, experiment_id):
+    variant_objects = []
+
+    for record in records:
+        plasmid_variant_index = str(record["plasmid_variant_index"])
+        variant = Variant(
+            experiment_id=experiment_id,
+            generation=int(record["generation"]),
+            experiment_variant_id=int(plasmid_variant_index) + 1,
+            plasmid_variant_index=plasmid_variant_index,
+            parent_variant_id=None,
+            dna_sequence=record["dna_sequence"],
+            protein_sequence=record.get("protein_sequence"),  # optional if TSV has it
+            protein_yield=float(record["protein_yield"]),
+            dna_yield=float(record["dna_yield"]),
+            activity_score=record.get("activity_score"),      # likely None at upload time
+            mutation_count=record.get("mutation_count"),      # likely None at upload time
+            created_at=datetime.utcnow(),
+            custom_metadata=record.get("custom_metadata"),
+        )
+        db.session.add(variant)
+        variant_objects.append((variant, record))
+
+    db.session.flush()
+
+    id_map = {
+        (v.generation, v.plasmid_variant_index): v.variant_id
+        for (v, _) in variant_objects
+    }
+    for (variant, record) in variant_objects:
+        gen = variant.generation
+
+        parent_index = record.get("parent_plasmid_variant")
+        if parent_index is None:
+            # Backward compatibility for payloads normalized before parent_plasmid_variant existed.
+            parent_index = record.get("parent_variant_id")
+
+        if gen <= 1 or not parent_index:
+            variant.parent_variant_id = None
+            continue
+
+        parent_key = (gen - 1, str(parent_index))
+        parent_id = id_map.get(parent_key)
+
+        if parent_id is None:
+            parent = Variant.query.filter_by(
+                experiment_id=experiment_id,
+                generation=gen - 1,
+                plasmid_variant_index=str(parent_index)
+            ).first()
+
+            parent_id = parent.variant_id if parent else None
+
+        variant.parent_variant_id = parent_id
+
+    db.session.commit()
+    return [v for (v, _) in variant_objects]
+
+
+def insert_mutation_records(records, variant_id):
+    """
+    Insert mutation records into database.
+    
+    Args:
+        records: List of mutation dicts from file_processor
+        variant_id: ID of variant these mutations belong to
+        
+    Returns:
+        List of created Mutations objects
+    """
+    mutation_objects = []
+    
+    for record in records:
+        mutation = Mutations(
+            variant_id=variant_id,
+            position=record['position'],
+            wt_residue=record['wt_residue'],
+            mutant_residue=record['mutant_residue'],
+            mutation_type=record['mutation_type'],
+            generation=record['generation'],
+            codon_change=record.get('codon_change')
+        )
+        
+        db.session.add(mutation)
+        mutation_objects.append(mutation)
+    
+    db.session.commit()
+    return mutation_objects
+
+
+
+def process_and_insert(file, experiment_id=None, user_id=None):
+    """
+    Main function: Process file and insert to appropriate table.
+    
+    Args:
+        file: Flask FileStorage object
+        experiment_id: Required for variant/mutation/activity data
+        user_id: Required for experiment data
+        
+    Returns:
+        Dict with insertion results
+        
+    Raises:
+        ValueError: If required IDs not provided or insertion fails
+    """
+    from app.uploads.file_handling import process_file
+    
+    # Process file
+    result = process_file(file)
+    data_type = result['data_type']
+    records = result['records']
+    
+    # Insert based on data type
+    try:
+        if data_type == 'experiment':
+            if not user_id:
+                raise ValueError("user_id required for experiment data")
+            
+            created = insert_experiment_records(records, user_id)
+            return {
+                'success': True,
+                'data_type': data_type,
+                'count': len(created),
+                'objects': created
+            }
+        
+        elif data_type == 'variant':
+            if not experiment_id:
+                raise ValueError("experiment_id required for variant data")
+            
+            created = insert_variant_records(records, experiment_id)
+            return {
+                'success': True,
+                'data_type': data_type,
+                'count': len(created),
+                'objects': created
+            }
+        
+        elif data_type == 'mutation':
+            if not experiment_id:
+                raise ValueError("experiment_id required for mutation data")
+            
+           
+            variant = Variant.query.filter_by(experiment_id=experiment_id).first()
+            if not variant:
+                raise ValueError("No variants found for this experiment")
+            
+            created = insert_mutation_records(records, variant.variant_id)
+            return {
+                'success': True,
+                'data_type': data_type,
+                'count': len(created),
+                'objects': created
+            }
+        
+    
+    except Exception as e:
+        db.session.rollback()
+        raise Exception(f"Database insertion failed: {str(e)}")
+    
+def store_analysis_results(variant: Variant, analysis: dict) -> int:
+    """
+    Updates variant + replaces mutations. Returns number of mutations inserted.
+    """
+    variant.protein_sequence = analysis["variant"]["protein"]
+    variant.mutation_count = analysis["mutations"]["mutation_count"]
+    activity = analysis.get("activity")
+    variant.activity_score = activity.get("activity_score_log2") if activity else None
+
+    Mutations.query.filter_by(variant_id=variant.variant_id).delete()
+
+    count = 0
+    for m in analysis["mutations"]["mutation_records"]:
+        db.session.add(Mutations(
+            variant_id=variant.variant_id,
+            position=int(m["position"]),
+            wt_residue=m["wt_residue"],
+            mutant_residue=m["mutant_residue"],
+            mutation_type=m["mutation_type"],
+            generation=int(m["generation"]),
+            codon_change=m.get("codon_change"),
+        ))
+        count += 1
+
+    return count

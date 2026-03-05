@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - D-E Web Monitoring Portal{% endblock %}
+
+{% block content %}
+{# Dashboard header #}
+<div class="p-4">
+  <div class="text-center">
+    <h1 class="h1 fw-bold mb-2">Dashboard</h1>
+    <h5 class="text-muted mb-0">
+      <p>Welcome back to your research overview</p>
+      <p>Here you can access all of your projects, start new analyses, and manage your account.</p>
+    </h5>
+  </div>
+</div>
+
+{# New experiment call-to-action #}
+<div class="container mt-1"> 
+    <div class="text-center mb-3">
+      <span class="section-badge section-badge-accent">Experiment Setup</span>
+    </div>
+    <div class="row justify-content-center gy-4">
+        <div class="col-xl-6">
+            <div class="card action-card border-0 shadow-sm h-100 reveal-up">
+                <div class="card-body p-4 mb-4 ">
+                    <h5 class="fw-bold">Stage New Experiment</h5>
+                    <p class="card-text mb-0">Click here to upload your UniProt ID and experimental data, and start a new analysis.</p>
+                    <a href="/experiments/new" class="btn btn-primary mt-3">Upload Your Data +</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Experiment totals summary #}
+<section class="container mt-5">
+  <div class="text-center mb-3">
+    <span class="section-badge section-badge-accent">Progress Snapshot</span>
+  </div>
+  <div class="row gx-3 gy-4">
+    <div class="col-6 col-md-4">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-1">
+        <div class="card-body">
+          <p class="text-muted small mb-1">All Experiments</p>
+          <h4 class="mb-0">{{ totals.all }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-3">
+        <div class="card-body">
+          <p class="text-muted small mb-1">In Progress</p>
+          <h4 class="mb-0">{{ totals.in_progress }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card metric-card border-0 shadow-sm h-100 reveal-up delay-4">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Completed</p>
+          <h4 class="mb-0">{{totals.completed }}</h4>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# Experiment tracker table with filters/search/sort #}
+<section class="container mt-5">
+    <div class="card data-card border-0 shadow-sm mt-4 mb-5 reveal-up">
+        <div class="card-header dashboard-head py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-beaker-fill"></i>
+                  <h3 class="mb-0 fw-bold">Experiment Tracker</h3>
+                </div>
+                <p class="small mb-0">Current and recent directed evolution campaigns</p>
+            </div>
+            <ul class="nav nav-pills nav-fill bg-light rounded p-1 dashboard-filters" style="font-size: 0.85rem;">
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'all' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='all', sort=sort_by, dir=sort_dir) }}">All</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'in_progress' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='in_progress', sort=sort_by, dir=sort_dir) }}">In Progress</a></li>
+                <li class="nav-item"><a class="nav-link py-1 {% if status_filter == 'completed' %}active{% else %}text-secondary{% endif %}" href="{{ url_for('main.dashboard', status='completed', sort=sort_by, dir=sort_dir) }}">Completed</a></li>
+            </ul>
+        </div>
+        <div class="card-body border-bottom py-3">
+            <form method="GET" action="{{ url_for('main.dashboard') }}" class="row g-2 align-items-end">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <div class="col-12 col-md-5">
+                    <label for="q" class="form-label small text-muted mb-1">Search</label>
+                    <input id="q" name="q" type="text" class="form-control form-control-sm" placeholder="Experiment name or UniProt ID" value="{{ search_query }}">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="sort" class="form-label small text-muted mb-1">Sort By</label>
+                    <select id="sort" name="sort" class="form-select form-select-sm">
+                        <option value="updated" {% if sort_by == 'updated' %}selected{% endif %}>Last Updated</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                        <option value="generation" {% if sort_by == 'generation' %}selected{% endif %}>Generations</option>
+                        <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="dir" class="form-label small text-muted mb-1">Direction</label>
+                    <select id="dir" name="dir" class="form-select form-select-sm">
+                        <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Descending</option>
+                        <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Ascending</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                </div>
+            </form>
+            {% if search_query or status_filter != 'all' %}
+              <div class="small text-muted mt-2">
+                Filtered results are active.
+                <a href="{{ url_for('main.dashboard') }}" class="ms-1">Clear filters</a>
+              </div>
+            {% endif %}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 dashboard-table">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Experiment</th>
+                        <th>UniProt ID</th>
+                        <th class="d-none d-md-table-cell">Variants</th>
+                        <th>Generations</th>
+                        <th>Status</th>
+                        <th class="d-none d-lg-table-cell">Last Updated</th>
+                        <th class="text-end pe-4 col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if experiments %}
+                  {% for exp in experiments %}
+                    <tr>
+                        <td class="ps-4 col-exp">
+                          <div>{{ exp.experiment_name }}</div>
+                        </td>
+                        <td class="col-id"><code class="text-primary fw-bold">{{ exp.uniprot_id }}</code></td>
+                        <td class="d-none d-md-table-cell">
+                          {% if exp.variant_count and exp.variant_count > 0 %}
+                            {{ exp.variant_count }}
+                          {% else %}
+                            <span class="text-muted">No data uploaded</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if exp.variant_count and exp.variant_count > 0 %}
+                            <span class="badge rounded-pill bg-info text-dark">{{ exp.max_generation }}</span>
+                          {% else %}
+                            <span class="text-muted">No data uploaded</span>
+                          {% endif %}
+                        </td>
+                        <td class="col-status">
+                          {% if exp.status == 'Completed' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ exp.status }}</span>
+                          {% elif exp.status == 'In Progress' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ exp.status }}</span>
+                          {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ exp.status }}</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-muted small d-none d-lg-table-cell">{{ exp.last_updated.strftime('%Y-%m-%d') if exp.last_updated else 'N/A' }}</td>
+                        <td class="text-end pe-4 col-action">
+                          <div class="dashboard-actions d-inline-flex gap-2">
+                            {% set action_label = 'Run Analysis' if exp.status == 'In Progress' else 'View Report' %}
+                            {% if exp.experiment_id is defined and exp.experiment_id %}
+                              <a href="{{ url_for('run_analysis.analysis_page', experiment_id=exp.experiment_id) if exp.status == 'In Progress' else url_for('report.view_report', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-outline-primary">{{ action_label }}</a>
+                            {% else %}
+                              <button type="button" class="btn btn-sm btn-outline-secondary" disabled>{{ action_label }}</button>
+                            {% endif %}
+                            {% if exp.status == 'Completed' %}
+                              <a href="{{ url_for('report.download_report_pdf', experiment_id=exp.experiment_id) }}" class="btn btn-sm btn-download-pdf">Download PDF</a>
+                            {% endif %}
+                          </div>
+                        </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                    <tr>
+                      <td class="ps-4 text-muted" colspan="7">No experiments match this view yet. Start by staging an experiment.</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

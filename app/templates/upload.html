@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  /* Shared table styling for the UniProt summary card rendered after accession lookup. */
+  .uniprot-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    width: 90%;
+    margin: 0 auto;
+    background-color: #fafdff;
+  }
+
+  .uniprot-meta-table {
+    margin: 0;
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .uniprot-meta-table th,
+  .uniprot-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .uniprot-meta-table tr:last-child th,
+  .uniprot-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .uniprot-meta-table th:last-child,
+  .uniprot-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .uniprot-meta-table th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .uniprot-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+
+  .feature-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .feature-meta-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .feature-meta-table th,
+  .feature-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .feature-meta-table tr:last-child th,
+  .feature-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .feature-meta-table th:last-child,
+  .feature-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .feature-meta-table thead th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .feature-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+</style>
+
+<!-- Three-step upload flow: validate UniProt, then FASTA, then assay data before analysis. -->
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-9">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="text-center w-100 mt-4">
+        <span class="section-badge section-badge-accent">Upload</span> 
+        <h1 class="h1 mb-1">Data upload</h1>
+        <p class="h5 text-muted mb-0">
+          1) UniProt ID → 2) Plasmid FASTA → 3) JSON/TSV upload
+        </p>
+      </div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Step 1 — Enter UniProt accession</h2>
+
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-8">
+            <label for="uniprotId" class="form-label">UniProt ID</label>
+            <input id="uniprotId" type="text" class="form-control" placeholder="e.g. P69905">
+          </div>
+          <div class="col-12 col-md-4 d-grid">
+            <button id="btnFetch" type="button" class="btn btn-primary">
+              Search
+            </button>
+          </div>
+        </div>
+
+        <div id="uniprotStatus" class="mt-3 small"></div>
+
+        <div id="uniprotDetailsWrap" class="mt-3" style="display:none;">
+          <hr>
+          <div class="row g-3">
+            <div class="col-12">
+              <div id="uniprotSummary" class="mb-2"></div>
+            </div>
+
+            <div class="col-12">
+              <h3 class="h6 mb-2">Feature table</h3>
+              <div class="feature-meta-wrap">
+                <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 feature-meta-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%;">Type</th>
+                      <th style="width: 15%;">Start</th>
+                      <th style="width: 15%;">End</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody id="featureTableBody">
+                    <!-- injected -->
+                  </tbody>
+                </table>
+                </div>
+              </div>
+              <div id="featureCount" class="text-muted small mt-2"></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="card mb-4" id="step2" style="display:none;">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Step 2 — Upload plasmid FASTA</h2>
+
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-8">
+            <label for="fastaFile" class="form-label">FASTA file</label>
+            <input
+              type="file"
+              id="fastaFile"
+              class="form-control"
+              accept=".fa,.fasta,.fna,.txt"
+            >
+            <div class="form-text">Accepted: .fa .fasta .fna .txt</div>
+          </div>
+        </div>
+
+        <div id="fastaStatus" class="mt-3 small"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="card mb-2" id="step3" style="display:none;">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Step 3 — Upload experiment data (.json / .tsv)</h2>
+
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-8">
+            <label for="dataFile" class="form-label">Data file</label>
+            <input
+              type="file"
+              id="dataFile"
+              class="form-control"
+              accept=".json,.tsv"
+            >
+            <div class="form-text">Accepted: .json .tsv</div>
+          </div>
+        </div>
+
+        <div id="dataStatus" class="mt-3 small"></div>
+      </div>
+    </div>
+
+    <!-- NEXT BUTTON (hidden until Step 3 succeeds) -->
+    <div class="d-grid mt-3">
+      <a id="nextButton"
+         href="#"
+         class="mb-3 btn btn-primary btn-lg"
+         style="display:none;">
+        Next → Run Analysis
+      </a>
+    </div>
+    
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
+<script>
+  // Cache the step containers so the UI can progressively reveal the workflow.
+  const step2 = document.getElementById("step2");
+  const step3 = document.getElementById("step3");
+
+  const uniprotIdInput = document.getElementById("uniprotId");
+  const btnFetch = document.getElementById("btnFetch");
+  const uniprotStatus = document.getElementById("uniprotStatus");
+
+  const uniprotDetailsWrap = document.getElementById("uniprotDetailsWrap");
+  const uniprotSummary = document.getElementById("uniprotSummary");
+  const featureTableBody = document.getElementById("featureTableBody");
+  const featureCount = document.getElementById("featureCount");
+
+  const fastaFileInput = document.getElementById("fastaFile");
+  const fastaStatus = document.getElementById("fastaStatus");
+
+  const dataFileInput = document.getElementById("dataFile");
+  const dataStatus = document.getElementById("dataStatus");
+
+  const nextButton = document.getElementById("nextButton");
+
+  let wtSequence = "";
+  let experimentId = null;
+
+  // Standardise alert rendering for each step's status region.
+  function setStatus(el, type, msg) {
+    // type: "success" | "danger" | "info" | "warning"
+    el.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${msg}</div>`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Preserve UniProt line breaks when displaying longer annotation text.
+  function formatTextBlock(value) {
+    return escapeHtml(value).replace(/\n/g, "<br>");
+  }
+
+  // Reset every downstream step when the upstream context changes or becomes invalid.
+  function resetAll(message="") {
+    step2.style.display = "none";
+    step3.style.display = "none";
+    uniprotDetailsWrap.style.display = "none";
+
+    fastaFileInput.value = "";
+    dataFileInput.value = "";
+
+    fastaStatus.innerHTML = "";
+    dataStatus.innerHTML = "";
+    featureTableBody.innerHTML = "";
+    featureCount.textContent = "";
+    uniprotSummary.innerHTML = "";
+
+    wtSequence = "";
+    experimentId = null;
+
+    // hide Next button
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
+    if (message) setStatus(uniprotStatus, "warning", message);
+    else uniprotStatus.innerHTML = "";
+  }
+
+  // Show the AlphaFold 3D preview for the validated wild-type protein when available.
+  async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = "";
+    container.style.position = "relative";
+    container.style.overflow = "hidden";
+
+    if (!pdbUrl || !window.$3Dmol) {
+      container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      return;
+    }
+
+    try {
+      const response = await fetch(pdbUrl);
+      if (!response.ok) throw new Error("PDB fetch failed");
+      const pdbText = await response.text();
+
+      const viewer = $3Dmol.createViewer(container, { backgroundColor: "white" });
+      viewer.addModel(pdbText, "pdb");
+      viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+      viewer.zoomTo();
+      viewer.render();
+      viewer.resize();
+
+      container.style.cursor = "pointer";
+      container.addEventListener("dblclick", () => {
+        window.open(alphafoldLink, "_blank", "noopener");
+      });
+    } catch (_) {
+      container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+    }
+  }
+
+  // STEP 1 — UniProt
+  // Step 1 validates the accession and seeds the upload session with wild-type metadata.
+  btnFetch.addEventListener("click", async () => {
+    const accession = uniprotIdInput.value.trim();
+
+    if (!accession) {
+      setStatus(uniprotStatus, "warning", "Please enter a UniProt accession.");
+      return;
+    }
+
+    setStatus(uniprotStatus, "info", "Fetching UniProt details...");
+    btnFetch.disabled = true;
+
+    // reset downstream steps on new fetch
+    // Reset later steps because a new accession invalidates any previous uploads.
+    step2.style.display = "none";
+    step3.style.display = "none";
+    uniprotDetailsWrap.style.display = "none";
+    fastaStatus.innerHTML = "";
+    dataStatus.innerHTML = "";
+    fastaFileInput.value = "";
+    dataFileInput.value = "";
+
+    // hide Next button
+    // The analysis link is only valid after all three upload steps succeed.
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
+    try {
+      const res = await fetch("/upload/api/uniprot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accession })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        resetAll(data.error || "Invalid UniProt accession.");
+        return;
+      }
+      
+      experimentId= data.experiment_id;
+
+      // Store the validated WT context so later uploads can be checked against it.
+      const wt = data.wt;
+      wtSequence = wt.sequence;
+      const alphafoldLink = wt.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${wt.accession}`;
+      const alphafoldPdbUrl = wt.alphafold_pdb_url;
+      const viewerId = `alphafold-viewer-${wt.accession.replace(/[^A-Za-z0-9_-]/g, "")}`;
+      const alphafoldHtml = `
+        <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
+        <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
+      `;
+      const similarityTexts = wt.similarity_texts || [];
+      const familyText = wt.family_text || (similarityTexts.length ? similarityTexts.join(" ") : "");
+      const hasCuratedAnnotation = !!(wt.function_text || wt.catalytic_activity || familyText);
+      const annotationRowsHtml = `
+        ${wt.gene_name ? `
+          <tr>
+            <th>Gene</th>
+            <td>${escapeHtml(wt.gene_name)}</td>
+          </tr>
+        ` : ""}
+        ${wt.function_text ? `
+          <tr>
+            <th>Function</th>
+            <td>${formatTextBlock(wt.function_text)}</td>
+          </tr>
+        ` : ""}
+        ${wt.catalytic_activity ? `
+          <tr>
+            <th>Catalytic activity</th>
+            <td>${formatTextBlock(wt.catalytic_activity)}</td>
+          </tr>
+        ` : ""}
+        ${familyText ? `
+          <tr>
+            <th>Family</th>
+            <td>${formatTextBlock(familyText)}</td>
+          </tr>
+        ` : ""}
+        ${!hasCuratedAnnotation ? `
+          <tr>
+            <th>Annotation</th>
+            <td class="text-muted">No curated functional annotation available.</td>
+          </tr>
+        ` : ""}
+      `;
+
+      setStatus(uniprotStatus, "success", "UniProt ID valid ");
+      step2.style.display = "block";
+      uniprotDetailsWrap.style.display = "block";
+
+      // Render the metadata and curated annotation summary returned by the backend.
+      uniprotSummary.innerHTML = `
+        <div class="row g-3 align-items-start">
+          <div class="col-12 col-lg-6">
+            <div class="h5 mb-3">
+              <strong>${wt.protein_name}</strong>
+            </div>
+            <div class="uniprot-meta-wrap">
+              <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0 uniprot-meta-table">
+                <tbody>
+                  <tr>
+                    <th style="width: 35%;">Accession</th>
+                    <td>${wt.accession}</td>
+                  </tr>
+                  <tr>
+                    <th>Organism</th>
+                    <td>${wt.organism_name || "Unknown Organism"}</td>
+                  </tr>
+                  <tr>
+                    <th>Length</th>
+                    <td>${wt.sequence_length} aa</td>
+                  </tr>
+                  ${annotationRowsHtml}
+                </tbody>
+              </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="small fw-bold mb-2 mt-2">AlphaFold Preview</div>
+            <div class="alphafold-wrap mt-2">${alphafoldHtml}</div>
+          </div>
+        </div>
+      `;
+
+      await renderAlphaFoldStructure(viewerId, alphafoldPdbUrl, alphafoldLink);
+
+            // Feature table
+      // Limit the feature table so the upload page stays compact even for heavily annotated proteins.
+      const feats = wt.features || [];
+      featureTableBody.innerHTML = "";
+
+      const maxRows = 10;
+      const show = feats.slice(0, maxRows);
+
+      if (show.length === 0) {
+        featureTableBody.innerHTML = `<tr><td colspan="4" class="text-muted">No features returned.</td></tr>`;
+      } else {
+        for (const f of show) {
+          const type = f.feature_type || "";
+          const start = f.start_pos ?? "";
+          const end = f.end_pos ?? "";
+          const desc = f.description || "";
+
+          featureTableBody.innerHTML += `
+            <tr>
+              <td>${type}</td>
+              <td>${start}</td>
+              <td>${end}</td>
+              <td>${desc}</td>
+            </tr>
+          `;
+        }
+      }
+
+      featureCount.textContent = feats.length > maxRows
+        ? `Showing ${maxRows} of ${feats.length} features.`
+        : `Features: ${feats.length}`;
+
+    } catch (err) {
+      resetAll("Network/server error. Try again.");
+    } finally {
+      btnFetch.disabled = false;
+    }
+  });
+
+  // STEP 2 — FASTA
+  // Step 2 validates the uploaded plasmid FASTA against the previously fetched WT protein.
+  fastaFileInput.addEventListener("change", async () => {
+    step3.style.display = "none";
+    dataStatus.innerHTML = "";
+
+    // hide Next button when FASTA changes
+    // Any FASTA change invalidates the final analysis link until revalidated.
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
+    const file = fastaFileInput.files?.[0];
+    if (!file) return;
+
+    if (!wtSequence) {
+      resetAll("No WT protein loaded. Enter a UniProt ID first.");
+      return;
+    }
+
+    setStatus(fastaStatus, "info", "Uploading and validating FASTA...");
+
+    const formData = new FormData();
+    formData.append("fastaFile", file);
+    formData.append("experiment_id", experimentId);
+    formData.append("wt_sequence", wtSequence);
+
+    try {
+      const res = await fetch("/upload/api/validate-fasta", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setStatus(fastaStatus, "danger", data.error || "Server error validating FASTA.");
+        return;
+      }
+
+      // A WT mismatch means the user must restart from UniProt selection to avoid mixed contexts.
+      if (!data.wt_check || data.wt_check.match !== true) {
+        // your rule: mismatch -> reset
+        resetAll("FASTA does not match the WT protein. Start again with UniProt.");
+        return;
+      }
+
+      setStatus(
+        fastaStatus,
+        "success",
+        `FASTA valid and matches WT (${data.dna_length_bp} bp)`
+      );
+
+      step3.style.display = "block";
+
+    } catch (err) {
+      setStatus(fastaStatus, "danger", "Network/server error during FASTA validation.");
+    }
+  });
+
+  // STEP 3 — JSON/TSV
+  // Step 3 uploads the assay data and unlocks the analysis route for this experiment.
+  dataFileInput.addEventListener("change", async () => {
+    const file = dataFileInput.files?.[0];
+    if (!file) return;
+
+    // hide Next button when data file changes
+    // Recompute the final navigation target whenever the uploaded dataset changes.
+    nextButton.style.display = "none";
+    nextButton.href = "#";
+
+    if (!experimentId) {
+      setStatus(dataStatus, "danger", "Missing experiment_id. Please redo UniProt step.");
+      return;
+  
+    }
+
+    setStatus(dataStatus, "info", "Processing data file...");
+
+    const formData = new FormData();
+    formData.append("dataFile", file);
+    formData.append("experiment_id", experimentId);
+    try {
+      const res = await fetch("/upload/api/upload-data", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setStatus(dataStatus, "danger", data.error || "Error processing data file.");
+        return;
+      }
+
+      setStatus(
+        dataStatus,
+        "success",
+        `File valid `
+      );
+
+      // SHOW NEXT BUTTON + LINK TO REPORT ROUTE
+      // Only expose the analysis route after the experiment has passed all upload checks.
+      nextButton.style.display = "block";
+      nextButton.href = `/run-analysis/${experimentId}`;
+
+    } catch (err) {
+      setStatus(dataStatus, "danger", "Network/server error processing file.");
+    }
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    // Reset cached state when the browser restores this page from back/forward cache.
+    if (event.persisted) {
+      resetAll("");
+    }
+  });
+
+  // Start from a clean state so hidden steps do not flash on first render.
+  // init clean
+  resetAll("");
+</script>
+
+{% endblock %}
+

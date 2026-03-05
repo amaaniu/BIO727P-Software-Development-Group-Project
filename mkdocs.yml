@@ -1,0 +1,30 @@
+site_name: Directed Evolution Monitoring & Analytics User Guide
+site_description: Help manual for the Directed Evolution Monitoring & Analytics web portal
+theme:
+  name: material
+  palette:
+    primary: teal
+    accent: blue
+  font:
+    text: Roboto
+    code: Roboto Mono
+extra_css:
+  - stylesheets/brand-tokens.css
+  - stylesheets/mkdocs-overrides.css
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+nav:
+  - Overview: overview.md
+  - Getting Started: getting_started.md
+  - Workflow: workflow.md
+  - Data Analysis: data_analysis.md
+  - Troubleshooting: troubleshooting.md
+  - FAQ: faq.md
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true

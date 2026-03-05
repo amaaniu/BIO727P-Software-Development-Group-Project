@@ -1,0 +1,520 @@
+/* Root Colors - this is where we define the colour palette and fonts used */
+:root{
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --color-primary: #1a6b7f;
+  --color-primary-dark: #135166;
+  --color-primary-foreground: #e4f9fd;
+  
+  --color-accent: #008791;
+  --color-accent-dark: #2abccf;
+  --color-accent-foreground: #ffffff;
+  
+  --color-background: #fcffff;
+  --color-foreground: #001b24;
+  --color-muted: #f0f4fa;
+  --color-muted-foreground: #5a7588;
+  --color-border: #e0e5eb;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  --shadow-1: 0 2px 10px rgba(30, 107, 127, 0.14);
+  --shadow-2: 0 6px 18px rgba(30, 107, 127, 0.2);
+  --shadow-glow: 0 0 14px rgba(42, 188, 207, 0.16);
+
+  --transition-fast: 180ms ease;
+  --transition-normal: 260ms ease;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-body);
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+}
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Feature Cards */
+.card {
+  animation: none;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+  border: 1px solid transparent;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-2) !important;
+  transform: translateY(-1px);
+}
+
+body:not(.home-page) .card:hover {
+  box-shadow: var(--shadow-2), var(--shadow-glow) !important;
+}
+
+.card.selected {
+  box-shadow: 0 4px 14px rgba(42, 188, 207, 0.22) !important;
+  border: 1px solid var(--color-accent);
+}
+
+.action-card {
+  border-left: 4px solid var(--color-accent);
+}
+
+.metric-card .card-body {
+  padding: var(--space-4) var(--space-5);
+}
+
+.metric-card h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.data-card {
+  border-top: 4px solid var(--color-primary-dark);
+  border-radius: var(--radius-md);
+}
+
+.reveal-up {
+  animation: slideUp 0.35s ease-out both;
+}
+
+.delay-1 { animation-delay: 40ms; }
+.delay-2 { animation-delay: 80ms; }
+.delay-3 { animation-delay: 120ms; }
+.delay-4 { animation-delay: 160ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .reveal-up {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Feature Icon Styling */
+.feature-icon {
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.feature-icon i {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.card:hover .feature-icon i {
+  transform: scale(1.04);
+}
+
+/* Text Styling */
+.card-body h5 {
+  color: var(--color-foreground);
+  margin-bottom: 0.75rem;
+}
+
+.card-text {
+  color: var(--color-muted-foreground);
+  line-height: 1.6;
+}
+
+/* Workflow Cards */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-body i {
+  color: var(--color-primary);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-body i {
+  color: var(--color-accent);
+  transform: scale(1.06);
+}
+
+.page-header {
+  padding: var(--space-6) var(--space-4) var(--space-4);
+}
+
+.page-header .page-title {
+  margin-bottom: var(--space-2);
+}
+
+.page-header .page-subtitle {
+  max-width: 880px;
+  margin: 0 auto;
+  color: var(--color-muted-foreground);
+}
+
+.workflow-step-card .card-body {
+  position: relative;
+  padding-top: 2.8rem !important;
+}
+
+.workflow-step-number {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workflow-arrow {
+  position: absolute;
+  right: -0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-accent);
+  font-size: 1.2rem;
+  opacity: 0.75;
+  z-index: 2;
+}
+
+/* Color Utilities */
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.text-accent {
+  color: var(--color-accent) !important;
+}
+
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.bg-accent {
+  background-color: var(--color-accent) !important;
+}
+
+.border-color {
+  border-color: var(--color-border) !important;
+}
+
+/* Navbar Styling */
+.navbar {
+  background-color: var(--color-primary) !important;
+  box-shadow: 0 2px 8px rgba(30, 107, 127, 0.15);
+}
+
+.navbar-brand {
+  color: var(--color-primary-foreground);
+  font-weight: 600;
+  font-size: 1.25rem;
+  transition: opacity 0.3s ease;
+}
+
+.navbar-brand:hover {
+  opacity: 0.8;
+  color: var(--color-foreground);
+}
+
+.navbar-nav .nav-link {
+  color: var(--color-primary-foreground);
+  transition: color 0.3s ease;
+  margin: 0 0.5rem;
+}
+
+.navbar-nav .nav-link:hover {
+  color: var(--color-foreground);
+}
+
+.navbar-nav .nav-link.active {
+  color: var(--color-accent);
+  border-bottom: 2px solid var(--color-accent);
+  padding-bottom: 0.25rem;
+}
+
+.navbar-toggler {
+  border-color: var(--color-primary-foreground);
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* Section badges */
+.section-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  margin-bottom: 0.75rem;
+}
+
+.section-badge-accent {
+  background-color: #e7f1ff;
+  color: var(--color-accent);
+}
+
+/* Custom styles for the buttons */
+.btn-primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.btn-secondary {
+  background-color: var(--color-accent-dark);
+  border-color: var(--color-accent-dark);
+  color: var(--color-accent-foreground);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active,
+.show > .btn-secondary.dropdown-toggle {
+  background-color: var(--color-primary);
+  border-color: var(--color-foreground);
+  color: var(--color-accent-foreground);
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
+}
+
+/* Home page button refinements */
+.home-page .home-cta-btn {
+  min-width: 140px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(26, 107, 127, 0.22);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.home-page .home-cta-btn:hover,
+.home-page .home-cta-btn:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(26, 107, 127, 0.24);
+}
+
+.home-page .home-features-btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+}
+
+/* Dashboard table */
+.dashboard-table {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  white-space: nowrap;
+}
+
+.dashboard-table thead th {
+  background-color: #e9f6f8;
+  color: var(--color-primary-dark);
+  border-bottom: 1px solid #cfe8ec;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dashboard-table tbody tr:nth-child(odd) {
+  background-color: #fcffff;
+}
+
+.dashboard-table tbody tr:nth-child(even) {
+  background-color: #f5fbfc;
+}
+
+.dashboard-table tbody tr:hover {
+  background-color: #eaf6f9 !important;
+}
+
+.dashboard-table tbody td {
+  border-bottom: 1px solid #e6f0f2;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.dashboard-table .col-exp {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-table .col-id code {
+  font-size: 0.85rem;
+}
+
+.dashboard-table .col-status .badge {
+  min-width: 84px;
+}
+
+.dashboard-table .col-action {
+  width: 240px;
+  white-space: normal;
+}
+
+.dashboard-table .dashboard-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.dashboard-table .dashboard-actions .btn {
+  white-space: nowrap;
+}
+
+.dashboard-head {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border-bottom: 1px solid var(--color-primary-dark);
+}
+
+.dashboard-head i {
+  color: var(--color-primary-foreground);
+}
+
+.dashboard-filters .nav-link {
+  border-radius: 999px;
+}
+
+.dashboard-filters .nav-link.active {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground) !important;
+}
+
+.dashboard-filters .nav-link:not(.active):hover {
+  color: var(--color-primary-dark) !important;
+}
+
+.dashboard-table .btn-outline-primary {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.dashboard-table .btn-outline-primary:hover,
+.dashboard-table .btn-outline-primary:focus {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+.dashboard-table .btn-download-pdf {
+  border-color: var(--color-foreground);
+  color: var(--color-foreground);
+}
+
+.dashboard-table .btn-download-pdf:hover,
+.dashboard-table .btn-download-pdf:focus {
+  background-color: var(--color-foreground);
+  border-color: var(--color-foreground);
+  color: var(--color-primary-foreground);
+}
+
+.form-control:focus-visible,
+.form-select:focus-visible,
+.btn:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(26, 107, 127, 0.45);
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+
+/* Apply to body OR your outermost wrapper div */
+body {
+    display: flex;
+    flex-direction: column;
+    /* Use 100dvh for mobile address bar compatibility, fallback to 100vh */
+    min-height: 100vh; 
+    min-height: 100dvh;
+    margin: 0;
+}
+
+/* The element containing your {% block content %} */
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    flex-shrink: 0;
+}
+
+.tutorial-shell {
+  background: transparent;
+  overflow: hidden;
+}
+
+.tutorial-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 120px);
+  min-height: 720px;
+  border: 0;
+}
+
+@media (max-width: 992px) {
+  .tutorial-frame {
+    height: calc(100vh - 110px);
+    min-height: 640px;
+  }
+}

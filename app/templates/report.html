@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  /* Summary metadata table styling for the report header section. */
+  .uniprot-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .uniprot-meta-table {
+    margin: 0;
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .uniprot-meta-table th,
+  .uniprot-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .uniprot-meta-table tr:last-child th,
+  .uniprot-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .uniprot-meta-table th:last-child,
+  .uniprot-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .uniprot-meta-table th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .uniprot-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+
+  #reportPage .btn-outline-primary {
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+  }
+
+  #reportPage .btn-outline-primary:hover,
+  #reportPage .btn-outline-primary:focus {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
+  }
+
+  .alphafold-wrap {
+    min-height: 360px;
+  }
+
+  .alphafold-caption {
+    margin-top: 0.5rem;
+    text-align: left;
+  }
+
+  #summaryTitle {
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+
+  .feature-meta-wrap {
+    border: 1px solid #7f96a5;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fafdff;
+  }
+
+  .feature-meta-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .feature-meta-table th,
+  .feature-meta-table td {
+    border-right: 1px solid #7f96a5;
+    border-bottom: 1px solid #7f96a5;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .feature-meta-table tr:last-child th,
+  .feature-meta-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .feature-meta-table th:last-child,
+  .feature-meta-table td:last-child {
+    border-right: 0;
+  }
+
+  .feature-meta-table thead th {
+    background: linear-gradient(135deg, rgba(26, 107, 127, 0.12), rgba(0, 135, 145, 0.08));
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .feature-meta-table td {
+    background-color: #fafdff;
+    color: var(--color-foreground);
+  }
+
+  .plot-print-image {
+    display: none;
+  }
+
+  .report-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .summary-two-col {
+    align-items: flex-start;
+  }
+
+  /* Print rules keep the exported PDF compact and substitute static images for 3D plots. */
+  @media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  nav, footer, .navbar, #downloadPdfBtn, .btn { display: none !important; }
+
+  html, body { margin: 0 !important; padding: 0 !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  .container, .container-fluid {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  #reportPage {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  #resultsBlock {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #resultsBlock > .card-body {
+    padding: 0 !important;
+  }
+
+  .report-section, .uniprot-meta-wrap, .feature-meta-wrap {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .plotly-graph-div, .js-plotly-plot, .plot-container, .svg-container {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    max-width: 100% !important;
+  }
+
+  .plotly-graph-div img {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+  }
+
+  .summary-two-col {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 1rem;
+  }
+
+  .summary-two-col > .summary-col {
+    flex: 0 0 calc(50% - 0.5rem);
+    max-width: calc(50% - 0.5rem);
+    width: calc(50% - 0.5rem);
+  }
+
+  .plot-print-image {
+    display: block !important;
+  }
+
+  .plot-print-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+  }
+
+  #viz5Block .plot-print-image img {
+    width: 90%;
+    max-width: 90%;
+    margin: 0 auto;
+  }
+
+  [data-has-print-image="true"] {
+    display: none !important;
+  }
+
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+</style>
+
+<!-- Report shell: hidden sections are progressively revealed once the page has rendered. -->
+<div
+  id="reportPage"
+  class="container py-4"
+  data-experiment-id="{{ experiment_id }}"
+  data-render-report-url="{{ url_for('report.api_render_report') }}"
+>
+  <div class="text-center">
+    <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
+    <h1>Report</h1>
+  </div>
+
+  <div class="d-flex justify-content-end mb-3">
+    <a
+      id="downloadPdfBtn"
+      class="btn btn-outline-primary"
+      href="{{ url_for('report.download_report_pdf', experiment_id=experiment_id) }}"
+    >
+      Download PDF
+    </a>
+  </div>
+
+  <div id="resultsBlock" class="card">
+    <div class="card-body">
+
+      <div class="mb-4 d-none report-section" id="summaryBlock">
+        <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
+        <div id="summaryContent"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz1Block">
+        <h3 class="h6 mb-2">Visualisation 1</h3>
+        <div id="viz1"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz2Block">
+        <h3 class="h6 mb-2">Visualisation 2</h3>
+        <div id="viz2"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz3Block">
+        <h3 class="h6 mb-2">Visualisation 3</h3>
+        <div id="viz3"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz4Block">
+        <h3 class="h6 mb-2">Visualisation 4</h3>
+        <div class="mb-2 d-none" id="fingerprintSelectWrap">
+          <label for="fingerprintVariantSelect" class="form-label mb-1 small text-muted">Fingerprint variant</label>
+          <select id="fingerprintVariantSelect" class="form-select form-select-sm" style="max-width: 280px;"></select>
+        </div>
+        <div id="viz4"></div>
+      </div>
+
+      <div class="mb-4 d-none report-section" id="viz5Block">
+        <h3 class="h6 mb-2">Visualisation 5</h3>
+        <div id="viz5"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  // Exposed for PDF/export flows that wait for the report to finish rendering.
+  window.__REPORT_READY__ = false;
+
+  const pageEl = document.getElementById("reportPage");
+  const experimentId = Number(pageEl?.dataset?.experimentId);
+  const renderReportUrl = pageEl?.dataset?.renderReportUrl || "/report/api/render-report";
+
+  const resultsBlock = document.getElementById("resultsBlock");
+
+  const summaryBlock = document.getElementById("summaryBlock");
+  const summaryTitle = document.getElementById("summaryTitle");
+  const summaryContent = document.getElementById("summaryContent");
+  const fingerprintSelectWrap = document.getElementById("fingerprintSelectWrap");
+  const fingerprintVariantSelect = document.getElementById("fingerprintVariantSelect");
+
+  let top10ExperimentVariantIds = [];
+  let selectedFingerprintExperimentVariantId = null;
+  let isRenderingReport = false;
+
+  const blocks = [
+    { block: document.getElementById("viz1Block"), el: document.getElementById("viz1"), key: "viz1" },
+    { block: document.getElementById("viz2Block"), el: document.getElementById("viz2"), key: "viz2" },
+    { block: document.getElementById("viz3Block"), el: document.getElementById("viz3"), key: "viz3" },
+    { block: document.getElementById("viz4Block"), el: document.getElementById("viz4"), key: "viz4" },
+    { block: document.getElementById("viz5Block"), el: document.getElementById("viz5"), key: "viz5" },
+  ];
+
+  // Some backend errors return HTML instead of JSON, so we capture a short snippet for debugging.
+  async function parseJsonResponse(response, fallbackMessage) {
+    const text = await response.text();
+    try { return JSON.parse(text); }
+    catch {
+      const snippet = text ? text.slice(0, 120) : "";
+      throw new Error(`${fallbackMessage}. Server returned non-JSON: ${snippet}`);
+    }
+  }
+
+  async function fetchWithRetry(url, options = {}, attempts = 2, delayMs = 2000) {
+    let lastErr = null;
+    for (let i = 0; i < attempts; i += 1) {
+      try { return await fetch(url, options); }
+      catch (err) {
+        lastErr = err;
+        if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastErr || new Error("Fetch failed");
+  }
+
+  // Rebuild inline <script> tags because assigning innerHTML alone will not execute them.
+  function setHtmlWithScripts(target, html) {
+    target.innerHTML = "";
+    const template = document.createElement("template");
+    template.innerHTML = html || "";
+    const nodes = Array.from(template.content.childNodes);
+
+    for (const node of nodes) {
+      if (node.nodeName && node.nodeName.toLowerCase() === "script") {
+        const s = document.createElement("script");
+        for (const attr of node.attributes || []) s.setAttribute(attr.name, attr.value);
+        s.text = node.text || node.textContent || "";
+        target.appendChild(s);
+      } else {
+        target.appendChild(node.cloneNode(true));
+      }
+    }
+  }
+
+  // Restyle feature tables returned as plain HTML so they match the report summary tables.
+  function applyUploadTableStyle(target) {
+    const table = target.querySelector("table");
+    if (!table) return;
+
+    table.classList.add("table", "table-sm", "align-middle", "mb-0", "feature-meta-table");
+    table.classList.remove("table-striped", "table-bordered");
+
+    const parent = table.parentElement;
+    if (parent && parent.classList.contains("feature-meta-wrap")) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "table-responsive feature-meta-wrap";
+    if (parent) {
+      parent.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    }
+  }
+
+  // Render the AlphaFold viewer when possible, otherwise fall back to the static preview image.
+  async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink, imageUrl) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = "";
+    container.style.position = "relative";
+    container.style.overflow = "hidden";
+
+    if (!pdbUrl || !window.$3Dmol) {
+      if (imageUrl) {
+        const safeUrl = String(imageUrl).replace(/"/g, "&quot;");
+        const safeLink = String(alphafoldLink || "#").replace(/"/g, "&quot;");
+        container.innerHTML = `
+          <a href="${safeLink}" target="_blank" rel="noopener">
+            <img src="${safeUrl}" alt="AlphaFold preview" style="width:100%; height:100%; object-fit:cover;" />
+          </a>
+        `;
+      } else {
+        container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(pdbUrl);
+      if (!response.ok) throw new Error("PDB fetch failed");
+      const pdbText = await response.text();
+
+      const viewer = $3Dmol.createViewer(container, { backgroundColor: "white" });
+      viewer.addModel(pdbText, "pdb");
+      viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+      viewer.zoomTo();
+      viewer.render();
+      viewer.resize();
+
+      container.style.cursor = "pointer";
+      container.addEventListener("dblclick", () => {
+        if (alphafoldLink) window.open(alphafoldLink, "_blank", "noopener");
+      });
+    } catch (_) {
+      if (imageUrl) {
+        const safeUrl = String(imageUrl).replace(/"/g, "&quot;");
+        const safeLink = String(alphafoldLink || "#").replace(/"/g, "&quot;");
+        container.innerHTML = `
+          <a href="${safeLink}" target="_blank" rel="noopener">
+            <img src="${safeUrl}" alt="AlphaFold preview" style="width:100%; height:100%; object-fit:cover;" />
+          </a>
+        `;
+      } else {
+        container.innerHTML = `<div class="small text-muted">Structure preview unavailable for this accession.</div>`;
+      }
+    }
+  }
+
+  // 3D Plotly traces do not print reliably, so they need a static image fallback.
+  function isThreeDimensionalFigure(fig) {
+    const traces = Array.isArray(fig?.data) ? fig.data : [];
+    return traces.some((trace) => {
+      const type = String(trace?.type || "").toLowerCase();
+      return ["surface", "scatter3d", "mesh3d", "cone", "streamtube", "volume", "isosurface"].includes(type);
+    });
+  }
+
+  // Capture a rasterised version of interactive plots for the print stylesheet to show in PDFs.
+  async function attachPrintImage(target, fig) {
+    if (!window.Plotly) return;
+
+    const existing = target.parentElement?.querySelector(".plot-print-image");
+    if (existing) existing.remove();
+
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const dataUrl = await Plotly.toImage(target, {
+        format: "png",
+        width: 1200,
+        height: 800,
+        scale: 2,
+      });
+
+      const wrap = document.createElement("div");
+      wrap.className = "plot-print-image";
+      wrap.innerHTML = `<img src="${dataUrl}" alt="Static plot preview" />`;
+      target.parentElement?.appendChild(wrap);
+      target.setAttribute("data-has-print-image", "true");
+    } catch (_) {
+      target.removeAttribute("data-has-print-image");
+    }
+  }
+
+  // Build the summary section from the structured payload returned by the report API.
+  async function renderSummary(summary) {
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+    }[ch]));
+
+    if (!summary || typeof summary !== "object") {
+      summaryContent.textContent = summary || "";
+      return;
+    }
+
+    const accession = summary.accession || "-";
+    const experimentName = escapeHtml(summary.experiment_name || "Summary");
+    const proteinName = escapeHtml(summary.protein_name || "Unknown protein");
+    const organismName = escapeHtml(summary.organism_name || "Unknown organism");
+    const sequenceLength = summary.sequence_length ? `${summary.sequence_length} aa` : "N/A";
+    const variants = Number.isFinite(summary.variants) ? summary.variants : "N/A";
+    const mutations = Number.isFinite(summary.mutations) ? summary.mutations : "N/A";
+    const generations = Array.isArray(summary.generations) && summary.generations.length
+      ? escapeHtml(summary.generations.join(", "))
+      : "N/A";
+    const accessionText = escapeHtml(accession);
+    const alphafoldLink = summary.alphafold_link || `https://alphafold.ebi.ac.uk/entry/${accession}`;
+    const viewerId = `alphafold-report-${String(accession).replace(/[^A-Za-z0-9_-]/g, "")}`;
+    const features = Array.isArray(summary.features) ? summary.features : [];
+    const maxFeatureRows = 10;
+    const visibleFeatures = features.slice(0, maxFeatureRows);
+    const featureRowsHtml = visibleFeatures.length
+      ? visibleFeatures.map((feature) => `
+          <tr>
+            <td>${escapeHtml(feature.feature_type || "")}</td>
+            <td>${escapeHtml(feature.start_pos ?? "")}</td>
+            <td>${escapeHtml(feature.end_pos ?? "")}</td>
+            <td>${escapeHtml(feature.description || "")}</td>
+          </tr>
+        `).join("")
+      : `<tr><td colspan="4" class="text-muted">No features returned.</td></tr>`;
+    const featureCountText = features.length > maxFeatureRows
+      ? `Showing ${maxFeatureRows} of ${features.length} features.`
+      : `Features: ${features.length}`;
+
+    if (summaryTitle) summaryTitle.textContent = experimentName;
+
+    summaryContent.innerHTML = `
+      <div class="row g-3 summary-two-col">
+        <div class="col-12 col-lg-6 summary-col">
+          <div class="uniprot-meta-wrap">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0 uniprot-meta-table">
+                <tbody>
+                  <tr><th style="width: 35%;">Protein name</th><td>${proteinName}</td></tr>
+                  <tr><th style="width: 35%;">Accession</th><td>${accessionText}</td></tr>
+                  <tr><th>Organism</th><td>${organismName}</td></tr>
+                  <tr><th>Length</th><td>${escapeHtml(sequenceLength)}</td></tr>
+                  <tr><th>Variants</th><td>${escapeHtml(variants)}</td></tr>
+                  <tr><th>Mutations</th><td>${escapeHtml(mutations)}</td></tr>
+                  <tr><th>Generations</th><td>${generations}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6 summary-col">
+          <div class="alphafold-wrap mt-2">
+            <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
+            <div class="small fw-bold alphafold-caption">AlphaFold Preview</div>
+            <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h4 class="h6 mb-0">Features</h4>
+          <div class="small text-muted">${escapeHtml(featureCountText)}</div>
+        </div>
+        <div class="table-responsive feature-meta-wrap">
+          <table class="table table-sm align-middle mb-0 feature-meta-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>${featureRowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    await renderAlphaFoldStructure(
+      viewerId,
+      summary.alphafold_pdb_url,
+      alphafoldLink,
+      summary.alphafold_img
+    );
+  }
+
+  // Each visualisation can arrive as a Plotly payload or as pre-rendered HTML from the backend.
+  async function renderViz(target, payload) {
+    if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
+      target.innerHTML = "";
+      const fig = payload.figure || {};
+      try {
+        await Plotly.newPlot(target, fig.data || [], fig.layout || {}, { responsive: true, displayModeBar: true });
+        requestAnimationFrame(() => Plotly.Plots.resize(target));
+        if (isThreeDimensionalFigure(fig)) {
+          await attachPrintImage(target, fig);
+        }
+      } catch (err) {
+        const msg = (err && err.message) ? err.message : String(err);
+        target.innerHTML = `<p class='text-danger'>Plot render failed: ${msg}</p>`;
+      }
+      return;
+    }
+    setHtmlWithScripts(target, payload || "<p class='text-muted'>No output.</p>");
+    applyUploadTableStyle(target);
+  }
+
+  // Main load pipeline: fetch the rendered report, reveal each section, then mark the page as ready.
+  async function loadReport() {
+    if (isRenderingReport) return;
+    isRenderingReport = true;
+    try {
+      if (!Number.isFinite(experimentId)) throw new Error("Missing or invalid experiment ID.");
+
+      const params = new URLSearchParams({
+        experiment_id: String(experimentId),
+      });
+      if (Number.isInteger(selectedFingerprintExperimentVariantId)) {
+        params.set(
+          "fingerprint_experiment_variant_id",
+          String(selectedFingerprintExperimentVariantId)
+        );
+      }
+      const renderUrl = `${renderReportUrl}?${params.toString()}`;
+      const rr = await fetchWithRetry(renderUrl);
+      const out = await parseJsonResponse(rr, "Render request failed");
+      if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
+
+      top10ExperimentVariantIds = Array.isArray(out.top10_experiment_variant_ids)
+        ? out.top10_experiment_variant_ids.map((v) => Number(v)).filter(Number.isFinite)
+        : [];
+      selectedFingerprintExperimentVariantId = Number.isFinite(out.selected_fingerprint_experiment_variant_id)
+        ? Number(out.selected_fingerprint_experiment_variant_id)
+        : null;
+
+      if (fingerprintSelectWrap && fingerprintVariantSelect) {
+        if (top10ExperimentVariantIds.length) {
+          fingerprintVariantSelect.innerHTML = "";
+          for (const id of top10ExperimentVariantIds) {
+            const opt = document.createElement("option");
+            opt.value = String(id);
+            opt.textContent = String(id);
+            if (id === selectedFingerprintExperimentVariantId) opt.selected = true;
+            fingerprintVariantSelect.appendChild(opt);
+          }
+          fingerprintSelectWrap.classList.remove("d-none");
+        } else {
+          fingerprintSelectWrap.classList.add("d-none");
+          fingerprintVariantSelect.innerHTML = "";
+        }
+      }
+
+      summaryBlock.classList.remove("d-none");
+      await renderSummary(out.summary);
+
+      const viz = out.viz || {};
+      for (const item of blocks) {
+        item.block.classList.remove("d-none");
+        await renderViz(item.el, viz[item.key]);
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      window.__REPORT_READY__ = true;
+    } finally {
+      isRenderingReport = false;
+    }
+  }
+
+  if (fingerprintVariantSelect) {
+    fingerprintVariantSelect.addEventListener("change", async (ev) => {
+      const v = Number(ev.target.value);
+      selectedFingerprintExperimentVariantId = Number.isFinite(v) ? v : null;
+      await loadReport();
+    });
+  }
+
+  // Keep the page usable if rendering fails or the report is not available yet.
+  loadReport().catch(err => {
+    window.__REPORT_READY__ = "error";
+    resultsBlock.querySelector(".card-body").insertAdjacentHTML(
+      "afterbegin",
+      `<div class="alert alert-warning mb-3">
+        Report not ready yet (or failed to load). ${String(err.message || "")}
+      </div>`
+    );
+  });
+</script>
+{% endblock %}

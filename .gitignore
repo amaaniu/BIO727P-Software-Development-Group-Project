@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+instance/app.db
+.DS_Store
+site/
+.cache/
