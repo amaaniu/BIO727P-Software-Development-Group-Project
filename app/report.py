@@ -302,9 +302,57 @@ def api_render_report():
 
     # Each visual block is isolated so one failed chart does not block the whole report.
     # ---- 1) Top 10 table ----
+    top10_ui_ids: list[int] = []
+    selected_fp_experiment_variant_id = None
     try:
         top10_df = compute_top10(variants_df)
-        selected_variant_id = int(top10_df.iloc[0]["variant_id"]) if not top10_df.empty else None
+
+        top10_variant_ids: list[int] = []
+        if not top10_df.empty and "variant_id" in top10_df.columns:
+            top10_variant_ids = [int(x) for x in top10_df["variant_id"].dropna().tolist()]
+
+        top10_experiment_variant_ids: list[int] = []
+        if not top10_df.empty:
+            if "experiment_variant_id" in top10_df.columns:
+                top10_experiment_variant_ids = [
+                    int(x) for x in top10_df["experiment_variant_id"].dropna().tolist()
+                ]
+            elif "variant_id" in top10_df.columns and "experiment_variant_id" in variants_df.columns:
+                idmap = (
+                    variants_df.loc[:, ["variant_id", "experiment_variant_id"]]
+                    .dropna(subset=["variant_id", "experiment_variant_id"])
+                    .drop_duplicates(subset=["variant_id"])
+                    .set_index("variant_id")["experiment_variant_id"]
+                    .to_dict()
+                )
+                top10_experiment_variant_ids = [
+                    int(idmap[v]) for v in top10_df["variant_id"].dropna().tolist() if v in idmap
+                ]
+
+        top10_ui_ids = top10_experiment_variant_ids or top10_variant_ids
+        selected_fp_experiment_variant_id = top10_ui_ids[0] if top10_ui_ids else None
+
+        requested_fp_experiment_variant_id = request.args.get(
+            "fingerprint_experiment_variant_id",
+            type=int
+        )
+        if (
+            requested_fp_experiment_variant_id is not None
+            and requested_fp_experiment_variant_id in top10_ui_ids
+        ):
+            selected_fp_experiment_variant_id = requested_fp_experiment_variant_id
+
+        selected_variant_id = None
+        if selected_fp_experiment_variant_id is not None:
+            if top10_experiment_variant_ids and "experiment_variant_id" in variants_df.columns and "variant_id" in variants_df.columns:
+                match = variants_df.loc[
+                    variants_df["experiment_variant_id"] == selected_fp_experiment_variant_id,
+                    "variant_id",
+                ]
+                if not match.empty:
+                    selected_variant_id = int(match.iloc[0])
+            elif selected_fp_experiment_variant_id in top10_variant_ids:
+                selected_variant_id = int(selected_fp_experiment_variant_id)
 
         viz1 = top10_df.to_html(
             index=False,
@@ -314,6 +362,8 @@ def api_render_report():
     except Exception as e:
         viz1 = f"<p class='text-danger'>Top10 failed: {e}</p>"
         selected_variant_id = None
+        top10_ui_ids = []
+        selected_fp_experiment_variant_id = None
 
     # ---- 2) Activity score plot ----
     try:
@@ -337,7 +387,7 @@ def api_render_report():
 
     # ---- 4) Mutation fingerprint ----
     try:
-        if selected_variant_id and not mutations_df.empty:
+        if selected_variant_id is not None and not mutations_df.empty:
             selected_variant = Variant.query.get(selected_variant_id)
             chain = get_lineage_chain(selected_variant)
             introduced_df = build_introduced_mutations_df(chain)
@@ -346,7 +396,7 @@ def api_render_report():
 
             fig4 = plot_mutation_fingerprint(introduced_df,
                                              protein_length=protein_length,
-                                             title=f"Mutation fingerprint (introduced per generation) — variant {selected_variant_id}",)
+                                             title=f"Mutation fingerprint (introduced per generation) - variant {selected_fp_experiment_variant_id}",)
             
             viz4 = _fig_to_payload(fig4)
         
@@ -374,7 +424,9 @@ def api_render_report():
     return jsonify({
         "ok": True,
         "summary": summary,
-        "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5}
+        "viz": {"viz1": viz1, "viz2": viz2, "viz3": viz3, "viz4": viz4, "viz5": viz5},
+        "top10_experiment_variant_ids": top10_ui_ids,
+        "selected_fingerprint_experiment_variant_id": selected_fp_experiment_variant_id,
     })
 
 
@@ -464,3 +516,4 @@ def download_report_pdf(experiment_id: int):
         mimetype="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
