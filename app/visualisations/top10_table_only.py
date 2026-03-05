@@ -72,7 +72,11 @@ def compute_top10(variants_df: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing required columns for top10: {sorted(missing)}")
 
-    df = variants_df[REQUIRED_COLS].copy()
+    extra_cols: list[str] = []
+    if "experiment_variant_id" in variants_df.columns:
+        extra_cols.append("experiment_variant_id")
+
+    df = variants_df[REQUIRED_COLS + extra_cols].copy()
 
     # ---- Ensure numeric activity score ----
     df["activity_score_log2"] = pd.to_numeric(
@@ -84,9 +88,10 @@ def compute_top10(variants_df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["activity_score_log2"])
 
     # ---- Deterministic sorting ----
+    tie_break_col = "experiment_variant_id" if "experiment_variant_id" in df.columns else "variant_id"
     top10 = (
         df.sort_values(
-            by=["activity_score_log2", "generation", "variant_id"],
+            by=["activity_score_log2", "generation", tie_break_col],
             ascending=[False, False, True],
             kind="mergesort",  # stable sorting for reproducibility
         )
@@ -94,4 +99,23 @@ def compute_top10(variants_df: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
-    return top10
+    if "experiment_variant_id" in top10.columns:
+        display_cols = [
+            "experiment_variant_id",
+            "generation",
+            "activity_score_log2",
+            "mutation_count",
+            "protein_yield",
+            "dna_yield",
+        ]
+    else:
+        display_cols = [
+            "variant_id",
+            "generation",
+            "activity_score_log2",
+            "mutation_count",
+            "protein_yield",
+            "dna_yield",
+        ]
+
+    return top10[display_cols].copy()
