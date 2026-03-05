@@ -1,43 +1,51 @@
-# app/report.py
+"""
+Build and serve analysis reports.
+Includes report page endpoints, summary/visualization payload helpers, and PDF export.
 """
 
-"""
 from __future__ import annotations
-from urllib.parse import urlparse
 
-from flask import Response, abort, request, url_for
-from app.models import Experiment, UniProtData, UniProtFeature
+# Standard library
+from urllib.parse import urlparse
 import json
-from flask import Blueprint, jsonify, render_template, abort, request
-from flask_login import current_user, login_required
+
+#Third-party libraries
 import pandas as pd
+from flask import Blueprint, jsonify, render_template, Response, abort, request, url_for
+from flask_login import current_user, login_required
 from playwright.sync_api import sync_playwright
 from sqlalchemy import func
+
 # DB models
 from app.models import db, Experiment, Variant, Mutations, UniProtData, UniProtFeature
+
+#App services and operations
 from app.db_operations import store_analysis_results
 from app.analysis.analysis import analyse_variant
-from app.visualisations.data_sources import get_variants, get_mutations
 from app.uploads.staging import alphafold_entry_url, fetch_alphafold_prediction
-# Analysis + visuals (based on your uploaded scripts)
-from app.visualisations.top10_table_only import compute_top10
 
+#Visualisation builders and data sources
+from app.visualisations.data_sources import get_variants, get_mutations
+from app.visualisations.top10_table_only import compute_top10
 from app.visualisations.activityscore_plot import plot_activity_violin
 from app.visualisations.trends import plot_activity_median_trend
 from app.visualisations.mutation_fingerprint import plot_mutation_fingerprint
 from app.visualisations.activity_landscape import plot_activity_landscape_3d
 
 
-# IMPORTANT → match your button URLs
 report_bp = Blueprint("report", __name__)
 
 @report_bp.get("/<int:experiment_id>")
 @login_required
 def view_report(experiment_id: int):
-    exp = Experiment.query.filter_by(
-        experiment_id=experiment_id,
-        user_id=current_user.user_id
-    ).first()
+    """Render the report page shell for a user's experiment.
+    Args:
+        experiment_id: Database identifier for the experiment to display.
+
+    Returns:
+        Response: Rendered HTML template for the report page.
+    """
+    exp = Experiment.query.filter_by(experiment_id=experiment_id,user_id=current_user.user_id).first()
     if not exp:
         abort(404, description="Experiment not found")
 
@@ -46,26 +54,28 @@ def view_report(experiment_id: int):
 @report_bp.route("/api/summary", methods=["GET"])
 @login_required
 def api_summary():
+    """Provide a summary of variants for a given experiment, suitable for report tables
+    Args:
+        None: Reads ``experiment_id`` from the request query string.
+
+    Returns:
+        Response: JSON response containing variant summary rows or an error.
+    """
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
     
-    exp = Experiment.query.filter_by(
-        experiment_id=experiment_id,
-        user_id=current_user.user_id
-    ).first()
+    exp = Experiment.query.filter_by(experiment_id=experiment_id, user_id=current_user.user_id).first()
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
-    variants = (Variant.query
-                .filter_by(experiment_id=experiment_id)
-                .order_by(Variant.generation.asc(), Variant.plasmid_variant_index.asc())
-                .all())
+    variants = (Variant.query.filter_by(experiment_id=experiment_id)
+                .order_by(Variant.generation.asc(), Variant.plasmid_variant_index.asc()).all())
 
     if not variants:
         return jsonify({"ok": False, "error": "No variants found"}), 404
 
-    # Only return fields needed for plotting + table
+    # Only return the fields the frontend summary and tables actually consume.
     rows = []
     for v in variants:
         rows.append({
@@ -82,14 +92,26 @@ def api_summary():
 
 
 def _fig_to_payload(fig):
+    """Convert a Plotly figure into a JSON-safe response payload.
+    Args:
+        fig: Plotly figure object or ``None``.
+
+    Returns:
+        dict | None: Payload wrapper for Plotly figures, or ``None`` when no
+        figure was supplied.
+    """
     if fig is None:
         return None
     # fig.to_plotly_json() can include numpy arrays; round-trip via JSON to make it Flask-jsonify safe.
     return {"type": "plotly", "figure": json.loads(fig.to_json())}
 
 def get_lineage_chain(leaf_variant):
-    """
-    Return lineage from root -> leaf following parent links.
+    """Follow parent links to build a lineage chain from root to leaf.
+    Args:
+        leaf_variant: Final ``Variant`` object whose ancestry should be traced.
+
+    Returns:
+        list: Ordered lineage of ``Variant`` objects from root to leaf.
     """
     chain = []
     seen = set()
@@ -107,14 +129,14 @@ def get_lineage_chain(leaf_variant):
 
 
 def build_introduced_mutations_df(lineage_chain):
-    """
-    Build a dataframe of mutations introduced per generation along a lineage.
+    """Build a dataframe of mutations newly introduced at each lineage generation.
 
-    Robustness:
-      - Compares each variant to its actual Variant.parent (not just previous in the list)
-      - Uses .all() for lazy='dynamic' relationships
-      - De-duplicates (generation, position) collisions by joining labels later in plotting
-      - Optionally filters to substitution-like mutation types if present
+    Args:
+        lineage_chain (Iterable[Variant]): Ordered lineage of Variant objects.
+
+    Returns:
+        pandas.DataFrame: Mutation rows with columns:
+            generation, variant_id, position, wt_residue, mutant_residue.
     """
     import pandas as pd
 
@@ -135,6 +157,7 @@ def build_introduced_mutations_df(lineage_chain):
 
         return {(int(m.position), str(m.wt_residue), str(m.mutant_residue)) for m in muts}
 
+    # Compare each variant to its actual parent so branching lineages remain correct.
     rows = []
     for v in chain:
         cur = _keys(v)
@@ -159,6 +182,14 @@ def build_introduced_mutations_df(lineage_chain):
 @report_bp.route("/api/render-report", methods=["GET"])
 @login_required
 def api_render_report():
+    """Assemble the full report payload for the frontend report template.
+    Args:
+        None: Reads ``experiment_id`` from the request query string.
+
+    Returns:
+        Response: JSON response containing summary metadata and rendered
+        visualisation payloads or error information.
+    """
     experiment_id = request.args.get("experiment_id", type=int)
     if experiment_id is None:
         return jsonify({"ok": False, "error": "Missing experiment_id"}), 400
@@ -170,7 +201,7 @@ def api_render_report():
     if not exp:
         return jsonify({"ok": False, "error": "Experiment not found"}), 404
 
-    # --- Pull data via datasources.py (DB -> list[dict] -> DataFrame) ---
+    # Pull data via datasources.py (DB -> list[dict] -> DataFrame) ---
     variants_df = get_variants(experiment_id)
     if variants_df is None or variants_df.empty:
         return jsonify({"ok": True, "summary": "No variants available yet.", "viz": {}})
@@ -180,7 +211,7 @@ def api_render_report():
         if col in variants_df.columns:
             variants_df[col] = pd.to_numeric(variants_df[col], errors="coerce")
 
-    # Robust fallback: some pipelines store activity on Variant.activity_score only.
+    # some pipelines store activity on Variant.activity_score only.
     if "activity_score_log2" not in variants_df.columns and "activity_score" in variants_df.columns:
         variants_df["activity_score_log2"] = pd.to_numeric(variants_df["activity_score"], errors="coerce")
     elif "activity_score_log2" in variants_df.columns and "activity_score" in variants_df.columns:
@@ -214,6 +245,7 @@ def api_render_report():
             .tolist()
         )
 
+    # Normalise the accession before querying cached UniProt metadata tables.
     normalized_uniprot_id = (exp.uniprot_id or "").strip().upper()
     uniprot = (
         UniProtData.query
@@ -252,6 +284,7 @@ def api_render_report():
             .all()
         )
     ]
+    # Summary is shaped to match the report.html renderer directly.
     summary = {
         "experiment_name": getattr(exp, "experiment_name", None),
         "accession": exp.uniprot_id,
@@ -267,6 +300,7 @@ def api_render_report():
         "features": features,
     }
 
+    # Each visual block is isolated so one failed chart does not block the whole report.
     # ---- 1) Top 10 table ----
     try:
         top10_df = compute_top10(variants_df)
@@ -319,19 +353,18 @@ def api_render_report():
     # ---- 4) Mutation fingerprint ----
     try:
         if selected_variant_id and not mutations_df.empty:
-            selected_variant = db.session.get(Variant, selected_variant_id)
-            if selected_variant is None:
-                viz4 = "<p class='text-muted'>Selected variant not found.</p>"
-            else:
-                chain = get_lineage_chain(selected_variant)
-                introduced_df = build_introduced_mutations_df(chain)
-                selected_protein_length = len((selected_variant.protein_sequence or "").strip()) or protein_length
-                fig4 = plot_mutation_fingerprint(
-                    introduced_df,
-                    protein_length=selected_protein_length,
-                    title=f"Mutation fingerprint (introduced per generation) - variant {selected_variant_id}",
-                )
-                viz4 = _fig_to_payload(fig4)
+            selected_variant = Variant.query.get(selected_variant_id)
+            chain = get_lineage_chain(selected_variant)
+            introduced_df = build_introduced_mutations_df(chain)
+
+            protein_length = len(selected_variant.protein_sequence)
+
+            fig4 = plot_mutation_fingerprint(introduced_df,
+                                             protein_length=protein_length,
+                                             title=f"Mutation fingerprint (introduced per generation) — variant {selected_variant_id}",)
+            
+            viz4 = _fig_to_payload(fig4)
+        
         else:
             viz4 = "<p class='text-muted'>No mutation fingerprint available.</p>"
     except Exception as e:
@@ -364,6 +397,13 @@ def api_render_report():
 @report_bp.get("/<int:experiment_id>/download.pdf")
 @login_required
 def download_report_pdf(experiment_id: int):
+    """Render a user's report page to PDF using Playwright.
+    Args:
+        experiment_id: Database identifier for the experiment to export.
+
+    Returns:
+        Response: PDF download response for the rendered report.
+    """
     exp = Experiment.query.filter_by(
         experiment_id=experiment_id,
         user_id=current_user.user_id
@@ -392,6 +432,7 @@ def download_report_pdf(experiment_id: int):
         if session_cookies:
             context.add_cookies(session_cookies)
 
+        # Render the same authenticated browser view the user sees in HTML.
         page = context.new_page()
 
         # Load the report page and wait for network to settle
@@ -452,7 +493,7 @@ def download_report_pdf(experiment_id: int):
         # Print styling
         page.emulate_media(media="print")
 
-        # Wait for all images (including our injected ones) to load
+        # Wait for standard image assets to load before printing
         page.wait_for_function(
             "() => Array.from(document.images).every((img) => img.complete)",
             timeout=30_000

@@ -1,4 +1,4 @@
-# This file initialises the Flask application and registers all of the blueprints that form the web app so that the app can be run. It also sets up the database and Flask-Login for user authentication and session management, key components of the web application. 
+"""Application factory, extension setup, and blueprint registration."""
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy 
 from flask_login import LoginManager
@@ -9,10 +9,8 @@ login_manager = LoginManager()  # Create an instance of LoginManager to handle u
 
 def create_app():
     """
-    Creates and configures the Flask applicationfrom all of the registered blueprints. 
-    It sets up the database, initialises Flask-Login, and creates the necessary database table. 
-    The function returns the configured Flask application instance, which is run to start the web application.
-
+    Creates and configures the Flask application.
+    Registers blueprints, initialises extensions, and ensures database tables exist.
     """
     app = Flask(__name__, instance_relative_config=True)  # Create a Flask application instance with relative configuration
     os.makedirs(app.instance_path, exist_ok=True)  # Ensure the instance folder exists for storing the database file

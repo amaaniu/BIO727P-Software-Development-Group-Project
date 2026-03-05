@@ -14,8 +14,7 @@ Yes. Upload plasmid FASTA encoding the variants from your DE run so sequence-lev
 
 ## What does the Activity Score represent?
 
-It is a composite score used to compare variants based on analysis components defined in `Data Analysis`.
-# The full formula and logic are intentionally kept as a template until the final implementation details are available.
+It is a composite score used to compare variants, and it is fully defined in `Data Analysis`.
 
 ## Can I export results?
 

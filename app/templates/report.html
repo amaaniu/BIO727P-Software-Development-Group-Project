@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
+  /* Summary metadata table styling for the report header section. */
   .uniprot-meta-wrap {
     border: 1px solid #7f96a5;
     border-radius: 10px;
@@ -44,27 +45,25 @@
     color: var(--color-foreground);
   }
 
-#reportPage .btn-outline-primary {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
-}
+  #reportPage .btn-outline-primary {
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+  }
 
-#reportPage .btn-outline-primary:hover,
-#reportPage .btn-outline-primary:focus {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-foreground);
+  #reportPage .btn-outline-primary:hover,
+  #reportPage .btn-outline-primary:focus {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
 
-}
-.btn-primary:focus-visible,
-.btn-secondary:focus-visible {
-  box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
-}
-
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 135, 145, 0.35);
+  }
 
   .alphafold-wrap {
     min-height: 360px;
-    text-align: left;
   }
 
   .alphafold-caption {
@@ -132,16 +131,15 @@
     align-items: flex-start;
   }
 
+  /* Print rules keep the exported PDF compact and substitute static images for 3D plots. */
   @media print {
   @page {
     size: A4;
     margin: 8mm;
   }
 
-  /* remove nav/footer/buttons in PDF */
   nav, footer, .navbar, #downloadPdfBtn, .btn { display: none !important; }
 
-  /* use the whole page width */
   html, body { margin: 0 !important; padding: 0 !important; }
   main { margin: 0 !important; padding: 0 !important; }
   .container, .container-fluid {
@@ -165,7 +163,6 @@
     padding: 0 !important;
   }
 
-  /* avoid ugly splits */
   .report-section, .uniprot-meta-wrap, .feature-meta-wrap {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -208,8 +205,8 @@
   }
 
   #viz5Block .plot-print-image img {
-    width: 70%;
-    max-width: 70%;
+    width: 90%;
+    max-width: 90%;
     margin: 0 auto;
   }
 
@@ -217,37 +214,36 @@
     display: none !important;
   }
 
-  /* better colour fidelity */
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 </style>
 
+<!-- Report shell: hidden sections are progressively revealed once the page has rendered. -->
 <div
   id="reportPage"
   class="container py-4"
   data-experiment-id="{{ experiment_id }}"
   data-render-report-url="{{ url_for('report.api_render_report') }}"
 >
-
   <div class="text-center">
-      <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
-      <h1>Report</h1>
-    </div>
+    <span class="section-badge section-badge-accent">ANALYSIS REPORT</span>
+    <h1>Report</h1>
+  </div>
 
   <div class="d-flex justify-content-end mb-3">
-  <a
-    id="downloadPdfBtn"
-    class="btn btn-outline-primary"
-    href="{{ url_for('report.download_report_pdf', experiment_id=experiment_id) }}"
-  >
-    Download PDF
-  </a>
+    <a
+      id="downloadPdfBtn"
+      class="btn btn-outline-primary"
+      href="{{ url_for('report.download_report_pdf', experiment_id=experiment_id) }}"
+    >
+      Download PDF
+    </a>
   </div>
-    
-  <!-- RESULTS -->
+
   <div id="resultsBlock" class="card">
     <div class="card-body">
+      <h2 class="h5 mb-3">Report</h2>
 
       <div class="mb-4 d-none report-section" id="summaryBlock">
         <h3 class="h6 mb-2" id="summaryTitle">Summary</h3>
@@ -286,11 +282,10 @@
   </div>
 </div>
 
-
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
+  // Exposed for PDF/export flows that wait for the report to finish rendering.
   window.__REPORT_READY__ = false;
 
   const pageEl = document.getElementById("reportPage");
@@ -337,6 +332,7 @@
     { block: document.getElementById("viz5Block"), el: document.getElementById("viz5"), key: "viz5" },
   ];
 
+  // Some backend errors return HTML instead of JSON, so we capture a short snippet for debugging.
   async function parseJsonResponse(response, fallbackMessage) {
     const text = await response.text();
     try { return JSON.parse(text); }
@@ -358,6 +354,7 @@
     throw lastErr || new Error("Fetch failed");
   }
 
+  // Rebuild inline <script> tags because assigning innerHTML alone will not execute them.
   function setHtmlWithScripts(target, html) {
     target.innerHTML = "";
     const template = document.createElement("template");
@@ -376,6 +373,7 @@
     }
   }
 
+  // Restyle feature tables returned as plain HTML so they match the report summary tables.
   function applyUploadTableStyle(target) {
     const table = target.querySelector("table");
     if (!table) return;
@@ -394,6 +392,7 @@
     }
   }
 
+  // Render the AlphaFold viewer when possible, otherwise fall back to the static preview image.
   async function renderAlphaFoldStructure(containerId, pdbUrl, alphafoldLink, imageUrl) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -448,6 +447,7 @@
     }
   }
 
+  // 3D Plotly traces do not print reliably, so they need a static image fallback.
   function isThreeDimensionalFigure(fig) {
     const traces = Array.isArray(fig?.data) ? fig.data : [];
     return traces.some((trace) => {
@@ -456,6 +456,7 @@
     });
   }
 
+  // Capture a rasterised version of interactive plots for the print stylesheet to show in PDFs.
   async function attachPrintImage(target, fig) {
     if (!window.Plotly) return;
 
@@ -481,6 +482,7 @@
     }
   }
 
+  // Build the summary section from the structured payload returned by the report API.
   async function renderSummary(summary) {
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
@@ -543,7 +545,7 @@
           </div>
         </div>
         <div class="col-12 col-lg-6 summary-col">
-          <div class="alphafold-wrap">
+          <div class="alphafold-wrap mt-2">
             <div id="${viewerId}" class="rounded shadow-sm border border-2 border-secondary-subtle bg-white" style="height: 360px; width: 100%; position: relative; overflow: hidden;"></div>
             <div class="small fw-bold alphafold-caption">AlphaFold Preview</div>
             <div class="small text-muted mt-1">Double-click the structure to open AlphaFold.</div>
@@ -579,6 +581,7 @@
     );
   }
 
+  // Each visualisation can arrive as a Plotly payload or as pre-rendered HTML from the backend.
   async function renderViz(target, payload) {
     if (payload && typeof payload === "object" && payload.type === "plotly" && payload.figure) {
       target.innerHTML = "";
@@ -599,6 +602,7 @@
     applyUploadTableStyle(target);
   }
 
+  // Main load pipeline: fetch the rendered report, reveal each section, then mark the page as ready.
   async function loadReport() {
     if (isRenderingReport) return;
     isRenderingReport = true;
@@ -619,6 +623,7 @@
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
+<<<<<<< HEAD
     top10ExperimentVariantIds = Array.isArray(out.top10_experiment_variant_ids)
       ? out.top10_experiment_variant_ids.map((v) => Number(v)).filter(Number.isFinite)
       : [];
@@ -645,10 +650,11 @@
     }
 
     // show summary before creating the AlphaFold viewer so 3Dmol can measure the container
+=======
+>>>>>>> 3c8c170a733c961581e7cb57451901340dd96523
     summaryBlock.classList.remove("d-none");
     await renderSummary(out.summary);
 
-    // then visuals
     const viz = out.viz || {};
     for (const item of blocks) {
       item.block.classList.remove("d-none");
@@ -671,9 +677,9 @@
     });
   }
 
+  // Keep the page usable if rendering fails or the report is not available yet.
   loadReport().catch(err => {
     window.__REPORT_READY__ = "error";
-    // if someone hits view before analysis exists, you can show a friendly message
     resultsBlock.querySelector(".card-body").insertAdjacentHTML(
       "afterbegin",
       `<div class="alert alert-warning mb-3">
