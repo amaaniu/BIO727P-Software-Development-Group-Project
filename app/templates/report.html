@@ -267,10 +267,6 @@
 
       <div class="mb-4 d-none report-section" id="viz4Block">
         <h3 class="h6 mb-2">Visualisation 4</h3>
-        <div class="mb-2 d-none" id="fingerprintSelectWrap">
-          <label for="fingerprintVariantSelect" class="form-label mb-1 small text-muted">Fingerprint variant</label>
-          <select id="fingerprintVariantSelect" class="form-select form-select-sm" style="max-width: 280px;"></select>
-        </div>
         <div id="viz4"></div>
       </div>
 
@@ -291,51 +287,12 @@
   const pageEl = document.getElementById("reportPage");
   const experimentId = Number(pageEl?.dataset?.experimentId);
   const renderReportUrl = pageEl?.dataset?.renderReportUrl || "/report/api/render-report";
-  const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 
   const resultsBlock = document.getElementById("resultsBlock");
 
   const summaryBlock = document.getElementById("summaryBlock");
   const summaryTitle = document.getElementById("summaryTitle");
   const summaryContent = document.getElementById("summaryContent");
-  const fingerprintSelectWrap = document.getElementById("fingerprintSelectWrap");
-  const fingerprintVariantSelect = document.getElementById("fingerprintVariantSelect");
-
-  let top10ExperimentVariantIds = [];
-  const initialParams = new URLSearchParams(window.location.search);
-  const initialFingerprintParam = Number(initialParams.get("fingerprint_experiment_variant_id"));
-  let selectedFingerprintExperimentVariantId = Number.isFinite(initialFingerprintParam)
-    ? initialFingerprintParam
-    : null;
-  let isRenderingReport = false;
-
-  function syncFingerprintParamInUrl() {
-    const url = new URL(window.location.href);
-    if (Number.isInteger(selectedFingerprintExperimentVariantId)) {
-      url.searchParams.set(
-        "fingerprint_experiment_variant_id",
-        String(selectedFingerprintExperimentVariantId)
-      );
-    } else {
-      url.searchParams.delete("fingerprint_experiment_variant_id");
-    }
-    window.history.replaceState({}, "", url.toString());
-  }
-
-  function updateDownloadPdfLink() {
-    if (!downloadPdfBtn) return;
-    const rawHref = downloadPdfBtn.getAttribute("href") || "";
-    const base = rawHref.split("?")[0];
-    const params = new URLSearchParams();
-    if (Number.isInteger(selectedFingerprintExperimentVariantId)) {
-      params.set(
-        "fingerprint_experiment_variant_id",
-        String(selectedFingerprintExperimentVariantId)
-      );
-    }
-    const suffix = params.toString();
-    downloadPdfBtn.setAttribute("href", suffix ? `${base}?${suffix}` : base);
-  }
 
   const blocks = [
     { block: document.getElementById("viz1Block"), el: document.getElementById("viz1"), key: "viz1" },
@@ -617,52 +574,13 @@
 
   // Main load pipeline: fetch the rendered report, reveal each section, then mark the page as ready.
   async function loadReport() {
-    if (isRenderingReport) return;
-    isRenderingReport = true;
-    try {
     if (!Number.isFinite(experimentId)) throw new Error("Missing or invalid experiment ID.");
 
-    const params = new URLSearchParams({
-      experiment_id: String(experimentId),
-    });
-    if (Number.isInteger(selectedFingerprintExperimentVariantId)) {
-      params.set(
-        "fingerprint_experiment_variant_id",
-        String(selectedFingerprintExperimentVariantId)
-      );
-    }
-    const renderUrl = `${renderReportUrl}?${params.toString()}`;
+    const renderUrl = `${renderReportUrl}?experiment_id=${encodeURIComponent(experimentId)}`;
     const rr = await fetchWithRetry(renderUrl);
     const out = await parseJsonResponse(rr, "Render request failed");
     if (!rr.ok || !out.ok) throw new Error(out.error || "Failed to render report");
 
-    top10ExperimentVariantIds = Array.isArray(out.top10_experiment_variant_ids)
-      ? out.top10_experiment_variant_ids.map((v) => Number(v)).filter(Number.isFinite)
-      : [];
-    selectedFingerprintExperimentVariantId = Number.isFinite(out.selected_fingerprint_experiment_variant_id)
-      ? Number(out.selected_fingerprint_experiment_variant_id)
-      : null;
-    updateDownloadPdfLink();
-    syncFingerprintParamInUrl();
-
-    if (fingerprintSelectWrap && fingerprintVariantSelect) {
-      if (top10ExperimentVariantIds.length) {
-        fingerprintVariantSelect.innerHTML = "";
-        for (const id of top10ExperimentVariantIds) {
-          const opt = document.createElement("option");
-          opt.value = String(id);
-          opt.textContent = String(id);
-          if (id === selectedFingerprintExperimentVariantId) opt.selected = true;
-          fingerprintVariantSelect.appendChild(opt);
-        }
-        fingerprintSelectWrap.classList.remove("d-none");
-      } else {
-        fingerprintSelectWrap.classList.add("d-none");
-        fingerprintVariantSelect.innerHTML = "";
-      }
-    }
-
-    // show summary before creating the AlphaFold viewer so 3Dmol can measure the container
     summaryBlock.classList.remove("d-none");
     await renderSummary(out.summary);
 
@@ -674,19 +592,6 @@
     }
 
     window.__REPORT_READY__ = true;
-    } finally {
-      isRenderingReport = false;
-    }
-  }
-
-  if (fingerprintVariantSelect) {
-    fingerprintVariantSelect.addEventListener("change", async (ev) => {
-      const v = Number(ev.target.value);
-      selectedFingerprintExperimentVariantId = Number.isFinite(v) ? v : null;
-      updateDownloadPdfLink();
-      syncFingerprintParamInUrl();
-      await loadReport();
-    });
   }
 
   // Keep the page usable if rendering fails or the report is not available yet.
